@@ -114,7 +114,7 @@ export default function Maintenances() {
       const [maintenancesRes, polesRes] = await Promise.all([
         supabase
           .from('maintenances')
-          .select('*, poles(code, location_description), profiles:assigned_to(full_name)')
+          .select('*, poles(code, location_description)')
           .order('created_at', { ascending: false }),
         supabase.from('poles').select('*').order('code'),
       ]);
@@ -122,7 +122,7 @@ export default function Maintenances() {
       if (maintenancesRes.error) throw maintenancesRes.error;
       if (polesRes.error) throw polesRes.error;
 
-      setMaintenances((maintenancesRes.data as Maintenance[]) || []);
+      setMaintenances((maintenancesRes.data as unknown as Maintenance[]) || []);
       setPoles(polesRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
