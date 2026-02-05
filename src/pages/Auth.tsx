@@ -267,8 +267,9 @@ export default function Auth() {
 
         {/* Toggle Panel */}
         <div 
-          className={`absolute top-0 w-1/2 h-full bg-gradient-to-br from-primary via-primary to-accent overflow-hidden transition-all duration-500 z-20 rounded-3xl
+          className={`absolute top-0 w-1/2 h-full overflow-hidden transition-all duration-500 z-20 rounded-3xl
             ${isActive ? 'left-0 rounded-r-[150px]' : 'left-1/2 rounded-l-[150px]'}`}
+          style={{ background: 'linear-gradient(135deg, hsl(158 64% 35%) 0%, hsl(158 64% 28%) 50%, hsl(43 74% 40%) 100%)' }}
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
             {/* Logo */}
