@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,14 +34,14 @@ import {
   Search, 
   Filter, 
   Wrench,
-  Calendar,
   Clock,
   User,
   MoreHorizontal,
   AlertCircle,
   CheckCircle2,
   Timer,
-  XCircle
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -50,61 +50,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
 
-const mockMaintenances = [
-  { 
-    id: '1', 
-    poleCode: 'P-003', 
-    poleLocation: 'Jardim Bloco A',
-    failureType: 'lampada_queimada',
-    description: 'Lâmpada não acende desde ontem à noite',
-    priority: 'alta',
-    status: 'aberto',
-    reportedBy: 'Maria Silva',
-    assignedTo: null,
-    createdAt: '2024-01-20T10:30:00',
-    scheduledDate: null
-  },
-  { 
-    id: '2', 
-    poleCode: 'P-004', 
-    poleLocation: 'Playground',
-    failureType: 'oscilacao',
-    description: 'Luz oscilando intermitentemente',
-    priority: 'media',
-    status: 'em_andamento',
-    reportedBy: 'João Santos',
-    assignedTo: 'Carlos Técnico',
-    createdAt: '2024-01-19T14:00:00',
-    scheduledDate: '2024-01-22'
-  },
-  { 
-    id: '3', 
-    poleCode: 'P-008', 
-    poleLocation: 'Estacionamento C',
-    failureType: 'curto_circuito',
-    description: 'Poste desarmou o disjuntor',
-    priority: 'urgente',
-    status: 'concluido',
-    reportedBy: 'Ana Costa',
-    assignedTo: 'Carlos Técnico',
-    createdAt: '2024-01-18T08:15:00',
-    scheduledDate: '2024-01-19'
-  },
-  { 
-    id: '4', 
-    poleCode: 'P-012', 
-    poleLocation: 'Portaria Sul',
-    failureType: 'lampada_queimada',
-    description: 'Necessita troca preventiva',
-    priority: 'baixa',
-    status: 'aberto',
-    reportedBy: 'Sistema',
-    assignedTo: null,
-    createdAt: '2024-01-17T16:45:00',
-    scheduledDate: null
-  },
-];
+type Maintenance = Database['public']['Tables']['maintenances']['Row'] & {
+  poles: { code: string; location_description: string } | null;
+  profiles: { full_name: string } | null;
+};
+
+type Pole = Database['public']['Tables']['poles']['Row'];
 
 const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   aberto: { label: 'Aberto', icon: AlertCircle, color: 'bg-amber-500/10 text-amber-600 border-amber-200' },
@@ -130,15 +86,108 @@ const failureTypes: Record<string, string> = {
 };
 
 export default function Maintenances() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
+  const [poles, setPoles] = useState<Pole[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const filteredMaintenances = mockMaintenances.filter(m => {
+  const [formData, setFormData] = useState({
+    pole_id: '',
+    failure_type: '' as Database['public']['Enums']['failure_type'] | '',
+    priority: 'media' as Database['public']['Enums']['priority_level'],
+    description: '',
+    scheduled_date: '',
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [maintenancesRes, polesRes] = await Promise.all([
+        supabase
+          .from('maintenances')
+          .select('*, poles(code, location_description), profiles:assigned_to(full_name)')
+          .order('created_at', { ascending: false }),
+        supabase.from('poles').select('*').order('code'),
+      ]);
+
+      if (maintenancesRes.error) throw maintenancesRes.error;
+      if (polesRes.error) throw polesRes.error;
+
+      setMaintenances((maintenancesRes.data as Maintenance[]) || []);
+      setPoles(polesRes.data || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os dados',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateMaintenance = async () => {
+    if (!formData.pole_id || !formData.failure_type || !formData.description) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: 'Preencha todos os campos obrigatórios',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('maintenances').insert({
+        pole_id: formData.pole_id,
+        failure_type: formData.failure_type as Database['public']['Enums']['failure_type'],
+        priority: formData.priority,
+        description: formData.description,
+        scheduled_date: formData.scheduled_date || null,
+        reported_by: user?.id,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Ocorrência registrada com sucesso',
+      });
+
+      setIsDialogOpen(false);
+      setFormData({
+        pole_id: '',
+        failure_type: '',
+        priority: 'media',
+        description: '',
+        scheduled_date: '',
+      });
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Não foi possível registrar a ocorrência',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredMaintenances = maintenances.filter(m => {
     const matchesSearch = 
-      m.poleCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.poleLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.poles?.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.poles?.location_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || m.priority === priorityFilter;
@@ -154,6 +203,29 @@ export default function Maintenances() {
       minute: '2-digit'
     });
   };
+
+  const getStatusCounts = () => {
+    const counts: Record<string, number> = {
+      aberto: 0,
+      em_andamento: 0,
+      concluido: 0,
+      cancelado: 0,
+    };
+    maintenances.forEach(m => {
+      if (m.status) counts[m.status] = (counts[m.status] || 0) + 1;
+    });
+    return counts;
+  };
+
+  const statusCounts = getStatusCounts();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -182,22 +254,29 @@ export default function Maintenances() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pole">Poste</Label>
-                  <Select>
+                  <Label>Poste *</Label>
+                  <Select 
+                    value={formData.pole_id}
+                    onValueChange={(value) => setFormData({ ...formData, pole_id: value })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o poste" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="P-001">P-001 - Entrada Principal</SelectItem>
-                      <SelectItem value="P-002">P-002 - Estacionamento A</SelectItem>
-                      <SelectItem value="P-003">P-003 - Jardim Bloco A</SelectItem>
-                      <SelectItem value="P-004">P-004 - Playground</SelectItem>
+                      {poles.map((pole) => (
+                        <SelectItem key={pole.id} value={pole.id}>
+                          {pole.code} - {pole.location_description}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="failureType">Tipo de Falha</Label>
-                  <Select>
+                  <Label>Tipo de Falha *</Label>
+                  <Select
+                    value={formData.failure_type}
+                    onValueChange={(value) => setFormData({ ...formData, failure_type: value as any })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
@@ -211,8 +290,11 @@ export default function Maintenances() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="priority">Prioridade</Label>
-                  <Select>
+                  <Label>Prioridade</Label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value) => setFormData({ ...formData, priority: value as any })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a prioridade" />
                     </SelectTrigger>
@@ -224,16 +306,21 @@ export default function Maintenances() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="scheduledDate">Data Agendada (opcional)</Label>
-                  <Input id="scheduledDate" type="date" />
+                  <Label>Data Agendada (opcional)</Label>
+                  <Input 
+                    type="date" 
+                    value={formData.scheduled_date}
+                    onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Descrição do Problema</Label>
+                <Label>Descrição do Problema *</Label>
                 <Textarea 
-                  id="description" 
                   placeholder="Descreva detalhadamente o problema observado..."
                   rows={4}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
             </div>
@@ -241,7 +328,8 @@ export default function Maintenances() {
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={() => setIsDialogOpen(false)}>
+              <Button onClick={handleCreateMaintenance} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Registrar Ocorrência
               </Button>
             </DialogFooter>
@@ -252,7 +340,7 @@ export default function Maintenances() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         {Object.entries(statusConfig).map(([key, config]) => {
-          const count = mockMaintenances.filter(m => m.status === key).length;
+          const count = statusCounts[key] || 0;
           const StatusIcon = config.icon;
           return (
             <Card key={key} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setStatusFilter(key)}>
@@ -326,86 +414,97 @@ export default function Maintenances() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Poste</TableHead>
-                  <TableHead>Tipo de Falha</TableHead>
-                  <TableHead>Prioridade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMaintenances.map((maintenance) => {
-                  const status = statusConfig[maintenance.status];
-                  const priority = priorityConfig[maintenance.priority];
-                  const StatusIcon = status.icon;
-                  
-                  return (
-                    <TableRow key={maintenance.id} className="hover:bg-muted/50">
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{maintenance.poleCode}</p>
-                          <p className="text-sm text-muted-foreground">{maintenance.poleLocation}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {failureTypes[maintenance.failureType]}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={cn(priority.color)}>
-                          {priority.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn(status.color)}>
-                          <StatusIcon className="mr-1 h-3 w-3" />
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
+          {filteredMaintenances.length > 0 ? (
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Poste</TableHead>
+                    <TableHead>Tipo de Falha</TableHead>
+                    <TableHead>Prioridade</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMaintenances.map((maintenance) => {
+                    const status = statusConfig[maintenance.status || 'aberto'];
+                    const priority = priorityConfig[maintenance.priority || 'media'];
+                    const StatusIcon = status.icon;
+                    
+                    return (
+                      <TableRow key={maintenance.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{maintenance.poles?.code || 'N/A'}</p>
+                            <p className="text-sm text-muted-foreground">{maintenance.poles?.location_description || ''}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           <span className="text-sm">
-                            {maintenance.assignedTo || '-'}
+                            {failureTypes[maintenance.failure_type] || maintenance.failure_type}
                           </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          {formatDate(maintenance.createdAt)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-                            <DropdownMenuItem>Atribuir técnico</DropdownMenuItem>
-                            <DropdownMenuItem>Atualizar status</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              Cancelar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className={cn(priority.color)}>
+                            {priority.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn(status.color)}>
+                            <StatusIcon className="mr-1 h-3 w-3" />
+                            {status.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">
+                              {maintenance.profiles?.full_name || '-'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            {maintenance.created_at ? formatDate(maintenance.created_at) : '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                              <DropdownMenuItem>Atribuir técnico</DropdownMenuItem>
+                              <DropdownMenuItem>Atualizar status</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive">
+                                Cancelar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Wrench className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">Nenhuma ocorrência encontrada</p>
+              <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Registrar primeira ocorrência
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
