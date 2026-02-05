@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,13 +35,13 @@ import {
   Filter, 
   Lamp,
   MapPin,
-  Calendar,
   Zap,
   MoreHorizontal,
   CheckCircle2,
   AlertTriangle,
   Wrench,
-  XCircle
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -50,75 +50,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
 
-const mockPoles = [
-  { 
-    id: '1', 
-    code: 'P-001', 
-    location: 'Entrada Principal', 
-    type: 'led',
-    power: 100,
-    status: 'funcionando',
-    installDate: '2023-01-15',
-    lampHours: 8500,
-    lampLifespan: 50000
-  },
-  { 
-    id: '2', 
-    code: 'P-002', 
-    location: 'Estacionamento A', 
-    type: 'led',
-    power: 150,
-    status: 'funcionando',
-    installDate: '2023-01-15',
-    lampHours: 8500,
-    lampLifespan: 50000
-  },
-  { 
-    id: '3', 
-    code: 'P-003', 
-    location: 'Jardim Bloco A', 
-    type: 'solar',
-    power: 50,
-    status: 'com_falha',
-    installDate: '2023-03-20',
-    lampHours: 6200,
-    lampLifespan: 50000
-  },
-  { 
-    id: '4', 
-    code: 'P-004', 
-    location: 'Playground', 
-    type: 'led',
-    power: 80,
-    status: 'em_manutencao',
-    installDate: '2023-02-10',
-    lampHours: 7800,
-    lampLifespan: 50000
-  },
-  { 
-    id: '5', 
-    code: 'P-005', 
-    location: 'Quadra Esportiva', 
-    type: 'halogenea',
-    power: 200,
-    status: 'funcionando',
-    installDate: '2022-11-05',
-    lampHours: 12000,
-    lampLifespan: 30000
-  },
-  { 
-    id: '6', 
-    code: 'P-006', 
-    location: 'Estacionamento B', 
-    type: 'led',
-    power: 150,
-    status: 'desativado',
-    installDate: '2022-08-15',
-    lampHours: 0,
-    lampLifespan: 50000
-  },
-];
+type Pole = Database['public']['Tables']['poles']['Row'];
+type PoleInsert = Database['public']['Tables']['poles']['Insert'];
 
 const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   funcionando: { label: 'Funcionando', icon: CheckCircle2, color: 'bg-green-500/10 text-green-600 border-green-200' },
@@ -137,21 +75,125 @@ const lightingTypes: Record<string, string> = {
 };
 
 export default function Poles() {
+  const { toast } = useToast();
+  const { isManutencao } = useAuth();
+  const [poles, setPoles] = useState<Pole[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const filteredPoles = mockPoles.filter(pole => {
+  // Form state
+  const [formData, setFormData] = useState({
+    code: '',
+    location_description: '',
+    lighting_type: '' as Database['public']['Enums']['lighting_type'] | '',
+    power_watts: '',
+    installation_date: '',
+    lamp_lifespan_hours: '50000',
+    maintenance_company: '',
+  });
+
+  useEffect(() => {
+    fetchPoles();
+  }, []);
+
+  const fetchPoles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('poles')
+        .select('*')
+        .order('code', { ascending: true });
+
+      if (error) throw error;
+      setPoles(data || []);
+    } catch (error) {
+      console.error('Error fetching poles:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os postes',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreatePole = async () => {
+    if (!formData.code || !formData.location_description || !formData.lighting_type || !formData.power_watts) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: 'Preencha todos os campos obrigatórios',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const newPole: PoleInsert = {
+        code: formData.code,
+        location_description: formData.location_description,
+        lighting_type: formData.lighting_type as Database['public']['Enums']['lighting_type'],
+        power_watts: parseInt(formData.power_watts),
+        installation_date: formData.installation_date || null,
+        lamp_lifespan_hours: parseInt(formData.lamp_lifespan_hours) || 50000,
+        maintenance_company: formData.maintenance_company || null,
+      };
+
+      const { error } = await supabase.from('poles').insert(newPole);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Poste cadastrado com sucesso',
+      });
+
+      setIsDialogOpen(false);
+      setFormData({
+        code: '',
+        location_description: '',
+        lighting_type: '',
+        power_watts: '',
+        installation_date: '',
+        lamp_lifespan_hours: '50000',
+        maintenance_company: '',
+      });
+      fetchPoles();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Não foi possível cadastrar o poste',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredPoles = poles.filter(pole => {
     const matchesSearch = 
       pole.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pole.location.toLowerCase().includes(searchTerm.toLowerCase());
+      pole.location_description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || pole.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getLampHealthPercentage = (hours: number, lifespan: number) => {
-    return Math.round(((lifespan - hours) / lifespan) * 100);
+  const getLampHealthPercentage = (hours: number | null, lifespan: number | null) => {
+    if (!lifespan || lifespan === 0) return 100;
+    const currentHours = hours || 0;
+    return Math.max(0, Math.round(((lifespan - currentHours) / lifespan) * 100));
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -163,79 +205,113 @@ export default function Poles() {
             Gerenciamento e monitoramento de postes de iluminação
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Poste
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Cadastrar Novo Poste</DialogTitle>
-              <DialogDescription>
-                Preencha as informações do novo poste de iluminação
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="code">Código do Poste</Label>
-                  <Input id="code" placeholder="Ex: P-001" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type">Tipo de Iluminação</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(lightingTypes).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Localização</Label>
-                <Input id="location" placeholder="Ex: Entrada Principal, Bloco A" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="power">Potência (W)</Label>
-                  <Input id="power" type="number" placeholder="Ex: 100" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="installDate">Data de Instalação</Label>
-                  <Input id="installDate" type="date" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="lifespan">Vida Útil da Lâmpada (horas)</Label>
-                  <Input id="lifespan" type="number" placeholder="Ex: 50000" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company">Empresa de Manutenção</Label>
-                  <Input id="company" placeholder="Nome da empresa" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea id="notes" placeholder="Observações adicionais..." />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
+        {isManutencao && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Poste
               </Button>
-              <Button onClick={() => setIsDialogOpen(false)}>
-                Salvar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Cadastrar Novo Poste</DialogTitle>
+                <DialogDescription>
+                  Preencha as informações do novo poste de iluminação
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="code">Código do Poste *</Label>
+                    <Input 
+                      id="code" 
+                      placeholder="Ex: P-001" 
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Tipo de Iluminação *</Label>
+                    <Select 
+                      value={formData.lighting_type}
+                      onValueChange={(value) => setFormData({ ...formData, lighting_type: value as any })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(lightingTypes).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Localização *</Label>
+                  <Input 
+                    id="location" 
+                    placeholder="Ex: Entrada Principal, Bloco A" 
+                    value={formData.location_description}
+                    onChange={(e) => setFormData({ ...formData, location_description: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="power">Potência (W) *</Label>
+                    <Input 
+                      id="power" 
+                      type="number" 
+                      placeholder="Ex: 100" 
+                      value={formData.power_watts}
+                      onChange={(e) => setFormData({ ...formData, power_watts: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="installDate">Data de Instalação</Label>
+                    <Input 
+                      id="installDate" 
+                      type="date" 
+                      value={formData.installation_date}
+                      onChange={(e) => setFormData({ ...formData, installation_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="lifespan">Vida Útil da Lâmpada (horas)</Label>
+                    <Input 
+                      id="lifespan" 
+                      type="number" 
+                      placeholder="Ex: 50000" 
+                      value={formData.lamp_lifespan_hours}
+                      onChange={(e) => setFormData({ ...formData, lamp_lifespan_hours: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Empresa de Manutenção</Label>
+                    <Input 
+                      id="company" 
+                      placeholder="Nome da empresa" 
+                      value={formData.maintenance_company}
+                      onChange={(e) => setFormData({ ...formData, maintenance_company: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreatePole} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Filters */}
@@ -282,105 +358,118 @@ export default function Poles() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Código</TableHead>
-                  <TableHead>Localização</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Potência</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Vida Útil</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPoles.map((pole) => {
-                  const status = statusConfig[pole.status];
-                  const StatusIcon = status.icon;
-                  const healthPercentage = getLampHealthPercentage(pole.lampHours, pole.lampLifespan);
-                  
-                  return (
-                    <TableRow key={pole.id} className="hover:bg-muted/50">
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-sm">
-                            <Lamp className="h-4 w-4" />
+          {filteredPoles.length > 0 ? (
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Código</TableHead>
+                    <TableHead>Localização</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Potência</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Vida Útil</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPoles.map((pole) => {
+                    const status = statusConfig[pole.status || 'funcionando'];
+                    const StatusIcon = status.icon;
+                    const healthPercentage = getLampHealthPercentage(pole.current_lamp_hours, pole.lamp_lifespan_hours);
+                    
+                    return (
+                      <TableRow key={pole.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-sm">
+                              <Lamp className="h-4 w-4" />
+                            </div>
+                            <span className="font-medium">{pole.code}</span>
                           </div>
-                          <span className="font-medium">{pole.code}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          {pole.location}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-accent/50">
-                          {lightingTypes[pole.type]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Zap className="h-4 w-4 text-amber-500" />
-                          {pole.power}W
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn(status.color)}>
-                          <StatusIcon className="mr-1 h-3 w-3" />
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Restante</span>
-                            <span className={cn(
-                              "font-medium",
-                              healthPercentage > 50 ? "text-green-600" :
-                              healthPercentage > 20 ? "text-amber-600" : "text-red-600"
-                            )}>
-                              {healthPercentage}%
-                            </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            {pole.location_description}
                           </div>
-                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                            <div 
-                              className={cn(
-                                "h-full rounded-full transition-all",
-                                healthPercentage > 50 ? "bg-green-500" :
-                                healthPercentage > 20 ? "bg-amber-500" : "bg-red-500"
-                              )}
-                              style={{ width: `${healthPercentage}%` }}
-                            />
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-accent/50">
+                            {lightingTypes[pole.lighting_type] || pole.lighting_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Zap className="h-4 w-4 text-amber-500" />
+                            {pole.power_watts}W
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Abrir chamado</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              Desativar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn(status.color)}>
+                            <StatusIcon className="mr-1 h-3 w-3" />
+                            {status.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Restante</span>
+                              <span className={cn(
+                                "font-medium",
+                                healthPercentage > 50 ? "text-green-600" :
+                                healthPercentage > 20 ? "text-amber-600" : "text-red-600"
+                              )}>
+                                {healthPercentage}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div 
+                                className={cn(
+                                  "h-full rounded-full transition-all",
+                                  healthPercentage > 50 ? "bg-green-500" :
+                                  healthPercentage > 20 ? "bg-amber-500" : "bg-red-500"
+                                )}
+                                style={{ width: `${healthPercentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                              <DropdownMenuItem>Editar</DropdownMenuItem>
+                              <DropdownMenuItem>Abrir chamado</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive">
+                                Desativar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Lamp className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">Nenhum poste encontrado</p>
+              {isManutencao && (
+                <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Cadastrar primeiro poste
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
