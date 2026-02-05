@@ -269,7 +269,7 @@ export default function Auth() {
         <div 
           className={`absolute top-0 w-1/2 h-full overflow-hidden transition-all duration-500 z-20 rounded-3xl
             ${isActive ? 'left-0 rounded-r-[150px]' : 'left-1/2 rounded-l-[150px]'}`}
-          style={{ background: 'linear-gradient(135deg, hsl(158 64% 35%) 0%, hsl(158 64% 28%) 50%, hsl(43 74% 40%) 100%)' }}
+          style={{ background: 'linear-gradient(135deg, hsl(15 90% 50%) 0%, hsl(24 95% 53%) 35%, hsl(45 93% 47%) 100%)' }}
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
             {/* Logo */}
