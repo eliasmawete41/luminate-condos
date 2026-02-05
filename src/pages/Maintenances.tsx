@@ -57,7 +57,6 @@ import type { Database } from '@/integrations/supabase/types';
 
 type Maintenance = Database['public']['Tables']['maintenances']['Row'] & {
   poles: { code: string; location_description: string } | null;
-  profiles: { full_name: string } | null;
 };
 
 type Pole = Database['public']['Tables']['poles']['Row'];

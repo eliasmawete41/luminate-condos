@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,25 +12,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
-  Plus, 
   Search, 
   Users as UsersIcon,
   Mail,
@@ -39,7 +28,7 @@ import {
   MoreHorizontal,
   Shield,
   UserCheck,
-  UserX
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -48,69 +37,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-const mockUsers = [
-  { 
-    id: '1', 
-    name: 'Carlos Oliveira', 
-    email: 'carlos@email.com',
-    phone: '(11) 99999-1111',
-    role: 'admin',
-    unit: null,
-    status: 'ativo',
-    avatar: null
-  },
-  { 
-    id: '2', 
-    name: 'Maria Silva', 
-    email: 'maria@email.com',
-    phone: '(11) 99999-2222',
-    role: 'sindico',
-    unit: 'Bloco A - 101',
-    status: 'ativo',
-    avatar: null
-  },
-  { 
-    id: '3', 
-    name: 'João Santos', 
-    email: 'joao@email.com',
-    phone: '(11) 99999-3333',
-    role: 'morador',
-    unit: 'Bloco A - 102',
-    status: 'ativo',
-    avatar: null
-  },
-  { 
-    id: '4', 
-    name: 'Ana Costa', 
-    email: 'ana@email.com',
-    phone: '(11) 99999-4444',
-    role: 'morador',
-    unit: 'Bloco B - 201',
-    status: 'ativo',
-    avatar: null
-  },
-  { 
-    id: '5', 
-    name: 'Pedro Técnico', 
-    email: 'pedro@email.com',
-    phone: '(11) 99999-5555',
-    role: 'manutencao',
-    unit: null,
-    status: 'ativo',
-    avatar: null
-  },
-  { 
-    id: '6', 
-    name: 'Lucas Antigo', 
-    email: 'lucas@email.com',
-    phone: '(11) 99999-6666',
-    role: 'morador',
-    unit: null,
-    status: 'inativo',
-    avatar: null
-  },
-];
+interface UserWithRole {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  avatar_url: string | null;
+  roles: string[];
+}
 
 const roleConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   admin: { label: 'Administrador', color: 'bg-purple-500/10 text-purple-600 border-purple-200', icon: Shield },
@@ -120,25 +57,90 @@ const roleConfig: Record<string, { label: string; color: string; icon: React.Ele
   manutencao: { label: 'Manutenção', color: 'bg-amber-500/10 text-amber-600 border-amber-200', icon: UserCheck },
 };
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  ativo: { label: 'Ativo', color: 'bg-green-500/10 text-green-600' },
-  inativo: { label: 'Inativo', color: 'bg-slate-500/10 text-slate-600' },
-};
-
 export default function Users() {
+  const { toast } = useToast();
+  const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const filteredUsers = mockUsers.filter(user => {
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      // Fetch profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('full_name');
+
+      if (profilesError) throw profilesError;
+
+      // Fetch all roles
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      if (rolesError) throw rolesError;
+
+      // Map roles to users
+      const rolesMap: Record<string, string[]> = {};
+      roles?.forEach(r => {
+        if (!rolesMap[r.user_id]) rolesMap[r.user_id] = [];
+        rolesMap[r.user_id].push(r.role);
+      });
+
+      const usersWithRoles: UserWithRole[] = (profiles || []).map(p => ({
+        id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+        phone: p.phone,
+        avatar_url: p.avatar_url,
+        roles: rolesMap[p.id] || ['morador'],
+      }));
+
+      setUsers(usersWithRoles);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os usuários',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
     const matchesSearch = 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
+    const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter);
+    return matchesSearch && matchesRole;
   });
+
+  const getRoleCounts = () => {
+    const counts: Record<string, number> = {};
+    users.forEach(u => {
+      u.roles.forEach(role => {
+        counts[role] = (counts[role] || 0) + 1;
+      });
+    });
+    return counts;
+  };
+
+  const roleCounts = getRoleCounts();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -150,74 +152,6 @@ export default function Users() {
             Gestão de moradores e permissões de acesso
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Usuário
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Cadastrar Novo Usuário</DialogTitle>
-              <DialogDescription>
-                Adicione um novo morador ou funcionário ao sistema
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome Completo</Label>
-                  <Input placeholder="Nome do usuário" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" placeholder="email@exemplo.com" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input placeholder="(11) 99999-9999" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Perfil de Acesso</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o perfil" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(roleConfig).map(([value, config]) => (
-                        <SelectItem key={value} value={value}>{config.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Unidade (opcional para funcionários)</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a unidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="a101">Bloco A - 101</SelectItem>
-                    <SelectItem value="a102">Bloco A - 102</SelectItem>
-                    <SelectItem value="b201">Bloco B - 201</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={() => setIsDialogOpen(false)}>
-                Cadastrar e Enviar Convite
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Stats */}
@@ -227,7 +161,7 @@ export default function Users() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{mockUsers.length}</p>
+                <p className="text-2xl font-bold">{users.length}</p>
               </div>
               <div className="p-3 rounded-full bg-primary/10 text-primary">
                 <UsersIcon className="h-5 w-5" />
@@ -236,7 +170,7 @@ export default function Users() {
           </CardContent>
         </Card>
         {Object.entries(roleConfig).slice(0, 4).map(([key, config]) => {
-          const count = mockUsers.filter(u => u.role === key).length;
+          const count = roleCounts[key] || 0;
           const RoleIcon = config.icon;
           return (
             <Card key={key}>
@@ -281,16 +215,6 @@ export default function Users() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </CardContent>
@@ -308,93 +232,87 @@ export default function Users() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Perfil</TableHead>
-                  <TableHead>Unidade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => {
-                  const role = roleConfig[user.role];
-                  const status = statusConfig[user.status];
-                  const RoleIcon = role.icon;
-                  
-                  return (
-                    <TableRow key={user.id} className="hover:bg-muted/50">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={user.avatar || undefined} />
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {user.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{user.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="h-3 w-3 text-muted-foreground" />
-                            {user.email}
+          {filteredUsers.length > 0 ? (
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Perfil</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => {
+                    const primaryRole = user.roles[0] || 'morador';
+                    const role = roleConfig[primaryRole] || roleConfig.morador;
+                    const RoleIcon = role.icon;
+                    
+                    return (
+                      <TableRow key={user.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={user.avatar_url || undefined} />
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {user.full_name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{user.full_name}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-3 w-3" />
-                            {user.phone}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Mail className="h-3 w-3 text-muted-foreground" />
+                              {user.email}
+                            </div>
+                            {user.phone && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Phone className="h-3 w-3" />
+                                {user.phone}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn(role.color)}>
-                          <RoleIcon className="mr-1 h-3 w-3" />
-                          {role.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {user.unit ? (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            {user.unit}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles.map(r => {
+                              const roleInfo = roleConfig[r] || roleConfig.morador;
+                              return (
+                                <Badge key={r} variant="outline" className={cn(roleInfo.color)}>
+                                  {roleInfo.label}
+                                </Badge>
+                              );
+                            })}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={cn(status.color)}>
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Ver perfil</DropdownMenuItem>
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Alterar permissões</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              {user.status === 'ativo' ? 'Desativar' : 'Reativar'}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>Ver perfil</DropdownMenuItem>
+                              <DropdownMenuItem>Editar</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <UsersIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">Nenhum usuário encontrado</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

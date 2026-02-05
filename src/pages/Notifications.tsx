@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,57 +10,16 @@ import {
   Wrench,
   Lamp,
   Trash2,
-  CheckCheck
+  CheckCheck,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
 
-const mockNotifications = [
-  { 
-    id: '1', 
-    title: 'Poste P-003 com falha',
-    message: 'Foi registrada uma falha no poste P-003 localizado no Jardim Bloco A. Uma lâmpada queimada foi reportada.',
-    type: 'warning',
-    isRead: false,
-    createdAt: '2024-01-20T10:30:00',
-    relatedPole: 'P-003'
-  },
-  { 
-    id: '2', 
-    title: 'Manutenção concluída',
-    message: 'A manutenção do poste P-008 foi concluída com sucesso. A lâmpada foi substituída.',
-    type: 'success',
-    isRead: false,
-    createdAt: '2024-01-19T16:45:00',
-    relatedPole: 'P-008'
-  },
-  { 
-    id: '3', 
-    title: 'Vida útil próxima do fim',
-    message: 'A lâmpada do poste P-012 está com 85% da vida útil consumida. Recomendamos agendar uma manutenção preventiva.',
-    type: 'info',
-    isRead: true,
-    createdAt: '2024-01-18T09:00:00',
-    relatedPole: 'P-012'
-  },
-  { 
-    id: '4', 
-    title: 'Novo chamado atribuído',
-    message: 'Um novo chamado de manutenção foi atribuído a você. Poste P-004 com problema de oscilação.',
-    type: 'info',
-    isRead: true,
-    createdAt: '2024-01-17T14:20:00',
-    relatedPole: 'P-004'
-  },
-  { 
-    id: '5', 
-    title: 'Alerta crítico',
-    message: 'O poste P-015 apresentou curto-circuito. Necessária intervenção imediata.',
-    type: 'error',
-    isRead: true,
-    createdAt: '2024-01-16T22:15:00',
-    relatedPole: 'P-015'
-  },
-];
+type Notification = Database['public']['Tables']['notifications']['Row'];
 
 const typeConfig: Record<string, { icon: React.ElementType; color: string; bgColor: string }> = {
   success: { icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-500/10' },
@@ -70,25 +29,74 @@ const typeConfig: Record<string, { icon: React.ElementType; color: string; bgCol
 };
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user]);
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
+  const fetchNotifications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setNotifications(data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const markAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setNotifications(prev => 
+        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+      );
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const markAllAsRead = async () => {
+    try {
+      const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+      
+      if (unreadIds.length === 0) return;
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .in('id', unreadIds);
+
+      if (error) throw error;
+
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      toast({ title: 'Todas as notificações marcadas como lidas' });
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -100,6 +108,14 @@ export default function Notifications() {
     if (days < 7) return `${days} dia${days > 1 ? 's' : ''} atrás`;
     return date.toLocaleDateString('pt-BR');
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -166,7 +182,7 @@ export default function Notifications() {
               <div>
                 <p className="text-sm text-muted-foreground">Manutenções</p>
                 <p className="text-2xl font-bold">
-                  {notifications.filter(n => n.relatedPole).length}
+                  {notifications.filter(n => n.related_pole_id || n.related_maintenance_id).length}
                 </p>
               </div>
               <div className="p-3 rounded-full bg-blue-500/10 text-blue-600">
@@ -197,7 +213,7 @@ export default function Notifications() {
               </div>
             ) : (
               notifications.map((notification) => {
-                const config = typeConfig[notification.type];
+                const config = typeConfig[notification.type || 'info'];
                 const Icon = config.icon;
 
                 return (
@@ -205,7 +221,7 @@ export default function Notifications() {
                     key={notification.id}
                     className={cn(
                       "flex gap-4 p-4 rounded-lg border transition-colors cursor-pointer",
-                      notification.isRead 
+                      notification.is_read 
                         ? "bg-card hover:bg-muted/50" 
                         : "bg-accent/30 border-primary/20"
                     )}
@@ -219,7 +235,7 @@ export default function Notifications() {
                         <div>
                           <p className={cn(
                             "font-medium",
-                            !notification.isRead && "text-foreground"
+                            !notification.is_read && "text-foreground"
                           )}>
                             {notification.title}
                           </p>
@@ -228,30 +244,19 @@ export default function Notifications() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {!notification.isRead && (
+                          {!notification.is_read && (
                             <div className="h-2 w-2 rounded-full bg-primary" />
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notification.id);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mt-2">
                         <span className="text-xs text-muted-foreground">
-                          {formatDate(notification.createdAt)}
+                          {formatDate(notification.created_at)}
                         </span>
-                        {notification.relatedPole && (
+                        {notification.related_pole_id && (
                           <Badge variant="outline" className="text-xs">
                             <Lamp className="mr-1 h-3 w-3" />
-                            {notification.relatedPole}
+                            Poste relacionado
                           </Badge>
                         )}
                       </div>
