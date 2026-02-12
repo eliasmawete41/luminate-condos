@@ -76,6 +76,113 @@ export type Database = {
           },
         ]
       }
+      device_readings: {
+        Row: {
+          created_at: string | null
+          device_id: string
+          fault_detected: boolean
+          fault_type: string | null
+          id: string
+          is_on: boolean
+          latitude: number | null
+          longitude: number | null
+          pole_id: string | null
+          power_consumption_watts: number | null
+          raw_data: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: string
+          fault_detected?: boolean
+          fault_type?: string | null
+          id?: string
+          is_on?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          pole_id?: string | null
+          power_consumption_watts?: number | null
+          raw_data?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string
+          fault_detected?: boolean
+          fault_type?: string | null
+          id?: string
+          is_on?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          pole_id?: string | null
+          power_consumption_watts?: number | null
+          raw_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_readings_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "esp32_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_readings_pole_id_fkey"
+            columns: ["pole_id"]
+            isOneToOne: false
+            referencedRelation: "poles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      esp32_devices: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          device_token: string
+          id: string
+          last_seen_at: string | null
+          name: string
+          pole_id: string | null
+          registered_by: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          device_token?: string
+          id?: string
+          last_seen_at?: string | null
+          name: string
+          pole_id?: string | null
+          registered_by?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          device_token?: string
+          id?: string
+          last_seen_at?: string | null
+          name?: string
+          pole_id?: string | null
+          registered_by?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esp32_devices_pole_id_fkey"
+            columns: ["pole_id"]
+            isOneToOne: false
+            referencedRelation: "poles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maintenances: {
         Row: {
           assigned_to: string | null
