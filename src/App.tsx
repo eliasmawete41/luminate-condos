@@ -14,6 +14,7 @@ import Units from "./pages/Units";
 import Users from "./pages/Users";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
+import Devices from "./pages/Devices";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/usuarios" element={<Users />} />
               <Route path="/notificacoes" element={<Notifications />} />
               <Route path="/configuracoes" element={<Settings />} />
+              <Route path="/dispositivos" element={<Devices />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -8,7 +8,8 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  Zap
+  Zap,
+  Cpu
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,7 @@ const mainMenuItems = [
 const adminMenuItems = [
   { title: 'Unidades', url: '/unidades', icon: Building2 },
   { title: 'Usuários', url: '/usuarios', icon: Users },
+  { title: 'Dispositivos', url: '/dispositivos', icon: Cpu },
 ];
 
 const utilityMenuItems = [
