@@ -56,16 +56,16 @@ interface LightingTypeCount {
 }
 
 const statusColors: Record<string, string> = {
-  aberto: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  em_andamento: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  concluido: 'bg-green-500/10 text-green-600 border-green-200',
+  aberto: 'bg-secondary/10 text-secondary border-secondary/20',
+  em_andamento: 'bg-primary/10 text-primary border-primary/20',
+  concluido: 'bg-accent text-accent-foreground border-primary/10',
 };
 
 const priorityColors: Record<string, string> = {
-  baixa: 'bg-slate-100 text-slate-600',
-  media: 'bg-amber-100 text-amber-700',
-  alta: 'bg-orange-100 text-orange-700',
-  urgente: 'bg-red-100 text-red-700',
+  baixa: 'bg-muted text-muted-foreground',
+  media: 'bg-secondary/10 text-secondary',
+  alta: 'bg-primary/10 text-primary',
+  urgente: 'bg-destructive/10 text-destructive',
 };
 
 const failureTypeLabels: Record<string, string> = {
@@ -185,21 +185,21 @@ export default function Dashboard() {
       value: poleStats.funcionando.toString(), 
       icon: CheckCircle2, 
       trend: poleStats.total > 0 ? `${Math.round((poleStats.funcionando / poleStats.total) * 100)}%` : '0%',
-      color: 'bg-green-500/10 text-green-600'
+      color: 'bg-primary/10 text-primary'
     },
     { 
       title: 'Com Falhas', 
       value: poleStats.com_falha.toString(), 
       icon: AlertTriangle, 
       trend: 'Necessitam atenção',
-      color: 'bg-amber-500/10 text-amber-600'
+      color: 'bg-secondary/10 text-secondary'
     },
     { 
       title: 'Em Manutenção', 
       value: poleStats.em_manutencao.toString(), 
       icon: Wrench, 
       trend: 'Em andamento',
-      color: 'bg-blue-500/10 text-blue-600'
+      color: 'bg-accent text-accent-foreground'
     },
   ];
 
@@ -256,29 +256,29 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="p-4 rounded-lg bg-green-500/10 border border-green-200">
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <span className="font-medium text-green-700">Operacionais</span>
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-primary">Operacionais</span>
                 </div>
-                <p className="text-3xl font-bold text-green-700">{poleStats.funcionando}</p>
-                <p className="text-sm text-green-600/80">postes funcionando</p>
+                <p className="text-3xl font-bold text-primary">{poleStats.funcionando}</p>
+                <p className="text-sm text-primary/70">postes funcionando</p>
               </div>
-              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-200">
+              <div className="p-4 rounded-lg bg-secondary/10 border border-secondary/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  <span className="font-medium text-amber-700">Com Problemas</span>
+                  <AlertTriangle className="h-5 w-5 text-secondary" />
+                  <span className="font-medium text-secondary">Com Problemas</span>
                 </div>
-                <p className="text-3xl font-bold text-amber-700">{poleStats.com_falha}</p>
-                <p className="text-sm text-amber-600/80">necessitam reparo</p>
+                <p className="text-3xl font-bold text-secondary">{poleStats.com_falha}</p>
+                <p className="text-sm text-secondary/70">necessitam reparo</p>
               </div>
-              <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-200">
+              <div className="p-4 rounded-lg bg-accent border border-primary/10">
                 <div className="flex items-center gap-2 mb-2">
-                  <Wrench className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium text-blue-700">Em Serviço</span>
+                  <Wrench className="h-5 w-5 text-accent-foreground" />
+                  <span className="font-medium text-accent-foreground">Em Serviço</span>
                 </div>
-                <p className="text-3xl font-bold text-blue-700">{poleStats.em_manutencao}</p>
-                <p className="text-sm text-blue-600/80">em manutenção</p>
+                <p className="text-3xl font-bold text-accent-foreground">{poleStats.em_manutencao}</p>
+                <p className="text-sm text-accent-foreground/70">em manutenção</p>
               </div>
             </div>
           </CardContent>
