@@ -56,16 +56,16 @@ interface LightingTypeCount {
 }
 
 const statusColors: Record<string, string> = {
-  aberto: 'bg-secondary/10 text-secondary border-secondary/20',
-  em_andamento: 'bg-primary/10 text-primary border-primary/20',
-  concluido: 'bg-accent text-accent-foreground border-primary/10',
+  aberto: 'bg-amber-500/15 text-amber-700 border-amber-300 dark:text-amber-400 dark:border-amber-600',
+  em_andamento: 'bg-sky-500/15 text-sky-700 border-sky-300 dark:text-sky-400 dark:border-sky-600',
+  concluido: 'bg-emerald-500/15 text-emerald-700 border-emerald-300 dark:text-emerald-400 dark:border-emerald-600',
 };
 
 const priorityColors: Record<string, string> = {
-  baixa: 'bg-muted text-muted-foreground',
-  media: 'bg-secondary/10 text-secondary',
-  alta: 'bg-primary/10 text-primary',
-  urgente: 'bg-destructive/10 text-destructive',
+  baixa: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+  media: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+  alta: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
+  urgente: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
 };
 
 const failureTypeLabels: Record<string, string> = {
@@ -178,60 +178,71 @@ export default function Dashboard() {
       value: poleStats.total.toString(), 
       icon: Lamp, 
       trend: 'Cadastrados',
-      color: 'bg-primary/10 text-primary'
+      iconBg: 'bg-violet-500/15',
+      iconColor: 'text-violet-600 dark:text-violet-400',
+      gradient: 'from-violet-500/5 to-transparent',
     },
     { 
       title: 'Funcionando', 
       value: poleStats.funcionando.toString(), 
       icon: CheckCircle2, 
       trend: poleStats.total > 0 ? `${Math.round((poleStats.funcionando / poleStats.total) * 100)}%` : '0%',
-      color: 'bg-primary/10 text-primary'
+      iconBg: 'bg-emerald-500/15',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      gradient: 'from-emerald-500/5 to-transparent',
     },
     { 
       title: 'Com Falhas', 
       value: poleStats.com_falha.toString(), 
       icon: AlertTriangle, 
       trend: 'Necessitam atenção',
-      color: 'bg-secondary/10 text-secondary'
+      iconBg: 'bg-amber-500/15',
+      iconColor: 'text-amber-600 dark:text-amber-400',
+      gradient: 'from-amber-500/5 to-transparent',
     },
     { 
       title: 'Em Manutenção', 
       value: poleStats.em_manutencao.toString(), 
       icon: Wrench, 
       trend: 'Em andamento',
-      color: 'bg-accent text-accent-foreground'
+      iconBg: 'bg-sky-500/15',
+      iconColor: 'text-sky-600 dark:text-sky-400',
+      gradient: 'from-sky-500/5 to-transparent',
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Visão geral do sistema de monitoramento de postes
-          </p>
+      {/* Header com gradiente */}
+      <div className="rounded-xl gradient-sunset p-6 text-white shadow-lg">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl drop-shadow-sm">Dashboard</h1>
+            <p className="text-white/80">
+              Visão geral do sistema de monitoramento de postes
+            </p>
+          </div>
+          <Button onClick={() => navigate('/manutencoes')} variant="secondary" className="gap-2 shadow-md">
+            <Plus className="h-4 w-4" />
+            Nova Ocorrência
+          </Button>
         </div>
-        <Button onClick={() => navigate('/manutencoes')} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nova Ocorrência
-        </Button>
       </div>
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat) => (
-          <Card key={stat.title} className="relative overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <Card key={stat.title} className="relative overflow-hidden group hover:shadow-md transition-shadow">
+            <div className={cn("absolute inset-0 bg-gradient-to-br opacity-100", stat.gradient)} />
+            <CardHeader className="relative flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <div className={cn("p-2 rounded-lg", stat.color)}>
-                <stat.icon className="h-4 w-4" />
+              <div className={cn("p-2.5 rounded-xl", stat.iconBg)}>
+                <stat.icon className={cn("h-5 w-5", stat.iconColor)} />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
               <div className="text-3xl font-bold">{stat.value}</div>
               <p className="text-xs text-muted-foreground mt-1">{stat.trend}</p>
             </CardContent>
@@ -256,29 +267,29 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-300/30 dark:border-emerald-600/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span className="font-medium text-primary">Operacionais</span>
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="font-medium text-emerald-700 dark:text-emerald-300">Operacionais</span>
                 </div>
-                <p className="text-3xl font-bold text-primary">{poleStats.funcionando}</p>
-                <p className="text-sm text-primary/70">postes funcionando</p>
+                <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{poleStats.funcionando}</p>
+                <p className="text-sm text-emerald-600/70 dark:text-emerald-400/70">postes funcionando</p>
               </div>
-              <div className="p-4 rounded-lg bg-secondary/10 border border-secondary/20">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-300/30 dark:border-amber-600/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-5 w-5 text-secondary" />
-                  <span className="font-medium text-secondary">Com Problemas</span>
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <span className="font-medium text-amber-700 dark:text-amber-300">Com Problemas</span>
                 </div>
-                <p className="text-3xl font-bold text-secondary">{poleStats.com_falha}</p>
-                <p className="text-sm text-secondary/70">necessitam reparo</p>
+                <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">{poleStats.com_falha}</p>
+                <p className="text-sm text-amber-600/70 dark:text-amber-400/70">necessitam reparo</p>
               </div>
-              <div className="p-4 rounded-lg bg-accent border border-primary/10">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-sky-500/15 to-sky-500/5 border border-sky-300/30 dark:border-sky-600/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <Wrench className="h-5 w-5 text-accent-foreground" />
-                  <span className="font-medium text-accent-foreground">Em Serviço</span>
+                  <Wrench className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+                  <span className="font-medium text-sky-700 dark:text-sky-300">Em Serviço</span>
                 </div>
-                <p className="text-3xl font-bold text-accent-foreground">{poleStats.em_manutencao}</p>
-                <p className="text-sm text-accent-foreground/70">em manutenção</p>
+                <p className="text-3xl font-bold text-sky-700 dark:text-sky-300">{poleStats.em_manutencao}</p>
+                <p className="text-sm text-sky-600/70 dark:text-sky-400/70">em manutenção</p>
               </div>
             </div>
           </CardContent>
@@ -364,7 +375,7 @@ export default function Dashboard() {
                   className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full gradient-primary text-white font-semibold text-xs shadow-sm">
                       {item.poles?.code || 'N/A'}
                     </div>
                     <div>
