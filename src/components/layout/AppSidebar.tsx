@@ -7,9 +7,12 @@ import {
   Bell, 
   Settings,
   LogOut,
-  ChevronLeft,
   Zap,
-  Cpu
+  Cpu,
+  MessageCircle,
+  Star,
+  HeadphonesIcon,
+  MapPin
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -25,34 +28,43 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 
-const mainMenuItems = [
+const adminMenuItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Postes', url: '/postes', icon: Lamp },
   { title: 'Manutenções', url: '/manutencoes', icon: Wrench },
+  { title: 'Mapa', url: '/mapa', icon: MapPin },
 ];
 
-const adminMenuItems = [
+const adminManagementItems = [
   { title: 'Unidades', url: '/unidades', icon: Building2 },
   { title: 'Usuários', url: '/usuarios', icon: Users },
   { title: 'Dispositivos', url: '/dispositivos', icon: Cpu },
 ];
 
-const utilityMenuItems = [
+const adminUtilityItems = [
+  { title: 'Suporte', url: '/suporte', icon: HeadphonesIcon },
   { title: 'Notificações', url: '/notificacoes', icon: Bell },
   { title: 'Configurações', url: '/configuracoes', icon: Settings },
+];
+
+const consumerMenuItems = [
+  { title: 'Início', url: '/inicio', icon: LayoutDashboard },
+  { title: 'Suporte', url: '/suporte', icon: MessageCircle },
+  { title: 'Avaliações', url: '/avaliacoes', icon: Star },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
-  const { profile, signOut, isSindico } = useAuth();
+  const { profile, signOut, isSindico, roles } = useAuth();
   const collapsed = state === 'collapsed';
+
+  const isConsumer = !isSindico && (roles.includes('morador') || roles.length === 0);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -88,47 +100,64 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-lg font-bold text-sidebar-foreground">PosteGuard</span>
-              <span className="text-xs text-sidebar-foreground/60">Monitoramento</span>
+              <span className="text-xs text-sidebar-foreground/60">
+                {isConsumer ? 'Portal do Morador' : 'Monitoramento'}
+              </span>
             </div>
           )}
         </div>
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        <SidebarGroup>
-          <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
-            Principal
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainMenuItems.map(renderMenuItem)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {isSindico && (
+        {isConsumer ? (
+          // Consumer menu
           <SidebarGroup>
             <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
-              Administração
+              Menu
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {adminMenuItems.map(renderMenuItem)}
+                {consumerMenuItems.map(renderMenuItem)}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        ) : (
+          // Admin menu
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
+                Principal
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {adminMenuItems.map(renderMenuItem)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
-            Sistema
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {utilityMenuItems.map(renderMenuItem)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
+                Administração
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {adminManagementItems.map(renderMenuItem)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
+                Sistema
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {adminUtilityItems.map(renderMenuItem)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
