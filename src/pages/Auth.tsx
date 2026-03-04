@@ -23,7 +23,7 @@ const signupSchema = z.object({
 });
 
 export default function Auth() {
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, loading, signIn, signUp, isSindico } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -46,7 +46,8 @@ export default function Auth() {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    // Redirect based on role
+    return <Navigate to={isSindico ? '/dashboard' : '/inicio'} replace />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -102,7 +103,7 @@ export default function Auth() {
         setError(error.message);
       }
     } else {
-      setSuccess('Cadastro realizado com sucesso!');
+      setSuccess('Cadastro realizado com sucesso! Você já pode fazer login.');
       setSignupData({ fullName: '', email: '', password: '', confirmPassword: '' });
     }
   };
@@ -162,10 +163,6 @@ export default function Auth() {
               />
             </div>
             
-            <a href="#" className="block text-sm text-muted-foreground hover:text-primary text-right transition-colors">
-              Esqueceu a senha?
-            </a>
-            
             <Button 
               type="submit" 
               className="w-full h-12 rounded-lg font-semibold text-base shadow-lg hover:shadow-xl transition-all"
@@ -183,13 +180,14 @@ export default function Auth() {
           </form>
         </div>
 
-        {/* Register Form */}
+        {/* Register Form - Consumidores */}
         <div 
           className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-all duration-500 z-10
             ${isActive ? 'translate-x-full opacity-100' : 'translate-x-0 opacity-0 pointer-events-none'}`}
         >
           <form onSubmit={handleSignup} className="w-full max-w-xs space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center mb-2">Cadastro</h2>
+            <h2 className="text-3xl font-bold text-foreground text-center mb-1">Cadastro</h2>
+            <p className="text-center text-sm text-muted-foreground mb-2">Cadastro para moradores</p>
             
             {error && isActive && (
               <Alert variant="destructive" className="py-2">
@@ -199,8 +197,8 @@ export default function Auth() {
             )}
             
             {success && (
-              <Alert className="border-success bg-success/10 py-2">
-                <AlertDescription className="text-success text-sm">{success}</AlertDescription>
+              <Alert className="border-emerald-300 bg-emerald-50 py-2">
+                <AlertDescription className="text-emerald-700 text-sm">{success}</AlertDescription>
               </Alert>
             )}
             
@@ -272,24 +270,23 @@ export default function Auth() {
           style={{ background: 'linear-gradient(135deg, hsl(15 90% 50%) 0%, hsl(24 95% 53%) 35%, hsl(45 93% 47%) 100%)' }}
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
-            {/* Logo */}
             <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-foreground/20 backdrop-blur-sm">
-                <Zap className="h-8 w-8 text-primary-foreground" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                <Zap className="h-8 w-8 text-white" />
               </div>
             </div>
             
             {!isActive ? (
               <>
-                <h3 className="text-3xl font-bold text-primary-foreground mb-3">
+                <h3 className="text-3xl font-bold text-white mb-3">
                   Olá, Bem-vindo!
                 </h3>
-                <p className="text-primary-foreground/80 mb-8 text-sm leading-relaxed">
-                  Não possui uma conta?<br />Cadastre-se para acessar o sistema
+                <p className="text-white/80 mb-8 text-sm leading-relaxed">
+                  É morador do condomínio?<br />Cadastre-se para acessar o portal
                 </p>
                 <Button 
                   variant="outline" 
-                  className="border-2 border-primary-foreground text-primary-foreground bg-transparent hover:bg-primary-foreground hover:text-primary px-10 h-11 rounded-lg font-semibold transition-all"
+                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-orange-600 px-10 h-11 rounded-lg font-semibold transition-all"
                   onClick={switchToRegister}
                   type="button"
                 >
@@ -298,15 +295,15 @@ export default function Auth() {
               </>
             ) : (
               <>
-                <h3 className="text-3xl font-bold text-primary-foreground mb-3">
+                <h3 className="text-3xl font-bold text-white mb-3">
                   Bem-vindo de volta!
                 </h3>
-                <p className="text-primary-foreground/80 mb-8 text-sm leading-relaxed">
+                <p className="text-white/80 mb-8 text-sm leading-relaxed">
                   Já possui uma conta?<br />Entre para acessar o sistema
                 </p>
                 <Button 
                   variant="outline" 
-                  className="border-2 border-primary-foreground text-primary-foreground bg-transparent hover:bg-primary-foreground hover:text-primary px-10 h-11 rounded-lg font-semibold transition-all"
+                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-orange-600 px-10 h-11 rounded-lg font-semibold transition-all"
                   onClick={switchToLogin}
                   type="button"
                 >
@@ -315,14 +312,13 @@ export default function Auth() {
               </>
             )}
             
-            <p className="absolute bottom-6 text-xs text-primary-foreground/60">
+            <p className="absolute bottom-6 text-xs text-white/60">
               PosteGuard - Sistema de Monitoramento
             </p>
           </div>
         </div>
       </div>
 
-      {/* Mobile Layout */}
       <style>{`
         @media (max-width: 768px) {
           .relative.w-full.max-w-\\[850px\\] {

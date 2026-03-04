@@ -76,6 +76,30 @@ export type Database = {
           },
         ]
       }
+      condo_settings: {
+        Row: {
+          condo_name: string | null
+          id: string
+          support_email: string | null
+          support_phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          condo_name?: string | null
+          id?: string
+          support_email?: string | null
+          support_phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          condo_name?: string | null
+          id?: string
+          support_email?: string | null
+          support_phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       device_readings: {
         Row: {
           created_at: string | null
@@ -179,6 +203,44 @@ export type Database = {
             columns: ["pole_id"]
             isOneToOne: false
             referencedRelation: "poles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluations: {
+        Row: {
+          comment: string | null
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          rating: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          rating: number
+          type?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          rating?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -508,6 +570,71 @@ export type Database = {
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_conversations: {
+        Row: {
+          consumer_id: string
+          created_at: string | null
+          id: string
+          status: string
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string | null
+          id?: string
+          status?: string
+          subject?: string
+          updated_at?: string | null
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string | null
+          id?: string
+          status?: string
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      support_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_from_bot: boolean | null
+          is_read: boolean | null
+          message: string
+          sender_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_from_bot?: boolean | null
+          is_read?: boolean | null
+          message: string
+          sender_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_from_bot?: boolean | null
+          is_read?: boolean | null
+          message?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
             referencedColumns: ["id"]
           },
         ]
