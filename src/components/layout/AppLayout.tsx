@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Bell, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 export function AppLayout() {
   const { user, loading, isSindico, roles } = useAuth();
@@ -21,26 +20,25 @@ export function AppLayout() {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
+  if (!user) return <Navigate to="/auth" replace />;
 
-  // Redirect consumers away from admin pages
-  const isConsumer = !isSindico && (roles.includes('morador') || roles.length === 0);
+  const isTechnician = roles.includes('manutencao') && !isSindico;
+  const isConsumer = !isSindico && !isTechnician && (roles.includes('morador') || roles.length === 0);
+
   const adminOnlyPaths = ['/dashboard', '/postes', '/manutencoes', '/unidades', '/usuarios', '/dispositivos', '/notificacoes', '/configuracoes', '/mapa'];
   const consumerOnlyPaths = ['/inicio', '/avaliacoes'];
+  const technicianPaths = ['/tecnico'];
 
-  if (isConsumer && adminOnlyPaths.includes(location.pathname)) {
-    return <Navigate to="/inicio" replace />;
-  }
+  if (isConsumer && adminOnlyPaths.includes(location.pathname)) return <Navigate to="/inicio" replace />;
+  if (isConsumer && technicianPaths.includes(location.pathname)) return <Navigate to="/inicio" replace />;
+  if (isTechnician && adminOnlyPaths.includes(location.pathname)) return <Navigate to="/tecnico" replace />;
+  if (isTechnician && consumerOnlyPaths.includes(location.pathname)) return <Navigate to="/tecnico" replace />;
+  if (!isConsumer && !isTechnician && consumerOnlyPaths.includes(location.pathname)) return <Navigate to="/dashboard" replace />;
 
-  if (!isConsumer && consumerOnlyPaths.includes(location.pathname)) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Redirect root
   if (location.pathname === '/') {
-    return <Navigate to={isConsumer ? '/inicio' : '/dashboard'} replace />;
+    if (isConsumer) return <Navigate to="/inicio" replace />;
+    if (isTechnician) return <Navigate to="/tecnico" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
@@ -54,7 +52,6 @@ export function AppLayout() {
                 <Menu className="h-5 w-5" />
               </SidebarTrigger>
             </div>
-            
             {!isConsumer && (
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" className="relative">
@@ -63,7 +60,6 @@ export function AppLayout() {
               </div>
             )}
           </header>
-          
           <main className="flex-1 overflow-auto p-4 md:p-6 bg-muted/30">
             <Outlet />
           </main>
