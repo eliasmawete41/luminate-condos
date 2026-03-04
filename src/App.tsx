@@ -9,6 +9,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ConsumerDashboard from "./pages/ConsumerDashboard";
+import TechnicianDashboard from "./pages/TechnicianDashboard";
 import Poles from "./pages/Poles";
 import Maintenances from "./pages/Maintenances";
 import Units from "./pages/Units";
@@ -44,6 +45,9 @@ const App = () => (
               <Route path="/configuracoes" element={<Settings />} />
               <Route path="/dispositivos" element={<Devices />} />
               <Route path="/mapa" element={<MapPage />} />
+              
+              {/* Technician routes */}
+              <Route path="/tecnico" element={<TechnicianDashboard />} />
               
               {/* Consumer routes */}
               <Route path="/inicio" element={<ConsumerDashboard />} />

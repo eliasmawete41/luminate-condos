@@ -1,34 +1,15 @@
 import { 
-  LayoutDashboard, 
-  Lamp, 
-  Building2, 
-  Users, 
-  Wrench, 
-  Bell, 
-  Settings,
-  LogOut,
-  Zap,
-  Cpu,
-  MessageCircle,
-  Star,
-  HeadphonesIcon,
-  MapPin
+  LayoutDashboard, Lamp, Building2, Users, Wrench, Bell, Settings,
+  LogOut, Zap, Cpu, MessageCircle, Star, HeadphonesIcon, MapPin,
+  HardHat
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
+  SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -58,13 +39,19 @@ const consumerMenuItems = [
   { title: 'Avaliações', url: '/avaliacoes', icon: Star },
 ];
 
+const technicianMenuItems = [
+  { title: 'Minhas Ordens', url: '/tecnico', icon: HardHat },
+  { title: 'Suporte', url: '/suporte', icon: MessageCircle },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const { profile, signOut, isSindico, roles } = useAuth();
   const collapsed = state === 'collapsed';
 
-  const isConsumer = !isSindico && (roles.includes('morador') || roles.length === 0);
+  const isTechnician = roles.includes('manutencao') && !isSindico;
+  const isConsumer = !isSindico && !isTechnician && (roles.includes('morador') || roles.length === 0);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -90,10 +77,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
-        <div className={cn(
-          "flex items-center gap-3",
-          collapsed && "justify-center"
-        )}>
+        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Zap className="h-6 w-6" />
           </div>
@@ -101,7 +85,7 @@ export function AppSidebar() {
             <div className="flex flex-col">
               <span className="text-lg font-bold text-sidebar-foreground">PosteGuard</span>
               <span className="text-xs text-sidebar-foreground/60">
-                {isConsumer ? 'Portal do Morador' : 'Monitoramento'}
+                {isConsumer ? 'Portal do Morador' : isTechnician ? 'Painel Técnico' : 'Monitoramento'}
               </span>
             </div>
           )}
@@ -110,61 +94,35 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2">
         {isConsumer ? (
-          // Consumer menu
           <SidebarGroup>
-            <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
-              Menu
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {consumerMenuItems.map(renderMenuItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
+            <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Menu</SidebarGroupLabel>
+            <SidebarGroupContent><SidebarMenu>{consumerMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
+          </SidebarGroup>
+        ) : isTechnician ? (
+          <SidebarGroup>
+            <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Menu</SidebarGroupLabel>
+            <SidebarGroupContent><SidebarMenu>{technicianMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
           </SidebarGroup>
         ) : (
-          // Admin menu
           <>
             <SidebarGroup>
-              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
-                Principal
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminMenuItems.map(renderMenuItem)}
-                </SidebarMenu>
-              </SidebarGroupContent>
+              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Principal</SidebarGroupLabel>
+              <SidebarGroupContent><SidebarMenu>{adminMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
             </SidebarGroup>
-
             <SidebarGroup>
-              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
-                Administração
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminManagementItems.map(renderMenuItem)}
-                </SidebarMenu>
-              </SidebarGroupContent>
+              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Administração</SidebarGroupLabel>
+              <SidebarGroupContent><SidebarMenu>{adminManagementItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
             </SidebarGroup>
-
             <SidebarGroup>
-              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
-                Sistema
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminUtilityItems.map(renderMenuItem)}
-                </SidebarMenu>
-              </SidebarGroupContent>
+              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Sistema</SidebarGroupLabel>
+              <SidebarGroupContent><SidebarMenu>{adminUtilityItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
             </SidebarGroup>
           </>
         )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className={cn(
-          "flex items-center gap-3",
-          collapsed && "justify-center"
-        )}>
+        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
           <Avatar className="h-9 w-9">
             <AvatarImage src={profile?.avatar_url || undefined} />
             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
@@ -173,21 +131,13 @@ export function AppSidebar() {
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {profile?.full_name || 'Usuário'}
-              </p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">
-                {profile?.email}
-              </p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.full_name || 'Usuário'}</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">{profile?.email}</p>
             </div>
           )}
           {!collapsed && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={signOut}
-              className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-            >
+            <Button variant="ghost" size="icon" onClick={signOut}
+              className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
               <LogOut className="h-4 w-4" />
             </Button>
           )}
