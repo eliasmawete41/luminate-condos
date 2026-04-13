@@ -19,7 +19,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-interface Conversation {
+// Interface de conversa
+interface Conversa {
   id: string;
   consumer_id: string;
   subject: string;
@@ -28,7 +29,8 @@ interface Conversation {
   updated_at: string;
 }
 
-interface Message {
+// Interface de mensagem
+interface Mensagem {
   id: string;
   conversation_id: string;
   sender_id: string;
@@ -38,59 +40,63 @@ interface Message {
   created_at: string;
 }
 
-const AUTO_RESPONSES = [
+// Respostas automáticas do bot
+const RESPOSTAS_AUTOMATICAS = [
   'Obrigado pela sua mensagem! Um atendente responderá em breve.',
   'Sua solicitação foi registrada. O horário de atendimento é das 8h às 18h.',
   'Para emergências, ligue para o número de suporte do condomínio.',
 ];
 
-export default function Support() {
-  const { user, isSindico } = useAuth();
+export default function Suporte() {
+  const { user: usuario, isSindico } = useAuth();
   const { toast } = useToast();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [supportPhone, setSupportPhone] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [conversas, setConversas] = useState<Conversa[]>([]);
+  const [conversaSelecionada, setConversaSelecionada] = useState<Conversa | null>(null);
+  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  const [novaMensagem, setNovaMensagem] = useState('');
+  const [carregando, setCarregando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+  const [telefoneSuporte, setTelefoneSuporte] = useState('');
+  const refFimMensagens = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchConversations();
-    fetchSettings();
+    buscarConversas();
+    buscarConfiguracoes();
   }, []);
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id);
+    if (conversaSelecionada) {
+      buscarMensagens(conversaSelecionada.id);
       
-      const channel = supabase
-        .channel(`messages-${selectedConversation.id}`)
+      // Inscrição em tempo real para novas mensagens
+      const canal = supabase
+        .channel(`mensagens-${conversaSelecionada.id}`)
         .on('postgres_changes', {
           event: 'INSERT',
           schema: 'public',
           table: 'support_messages',
-          filter: `conversation_id=eq.${selectedConversation.id}`,
+          filter: `conversation_id=eq.${conversaSelecionada.id}`,
         }, (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+          setMensagens(anterior => [...anterior, payload.new as Mensagem]);
         })
         .subscribe();
 
-      return () => { supabase.removeChannel(channel); };
+      return () => { supabase.removeChannel(canal); };
     }
-  }, [selectedConversation]);
+  }, [conversaSelecionada]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    refFimMensagens.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [mensagens]);
 
-  const fetchSettings = async () => {
+  // Buscar configurações do condomínio
+  const buscarConfiguracoes = async () => {
     const { data } = await supabase.from('condo_settings').select('support_phone').limit(1).single();
-    if (data) setSupportPhone(data.support_phone || '');
+    if (data) setTelefoneSuporte(data.support_phone || '');
   };
 
-  const fetchConversations = async () => {
+  // Buscar conversas
+  const buscarConversas = async () => {
     try {
       const { data, error } = await supabase
         .from('support_conversations')
@@ -98,94 +104,99 @@ export default function Support() {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setConversations(data || []);
-    } catch (error) {
-      console.error('Error:', error);
+      setConversas(data || []);
+    } catch (erro) {
+      console.error('Erro:', erro);
     } finally {
-      setLoading(false);
+      setCarregando(false);
     }
   };
 
-  const fetchMessages = async (conversationId: string) => {
+  // Buscar mensagens de uma conversa
+  const buscarMensagens = async (idConversa: string) => {
     const { data } = await supabase
       .from('support_messages')
       .select('*')
-      .eq('conversation_id', conversationId)
+      .eq('conversation_id', idConversa)
       .order('created_at', { ascending: true });
 
-    setMessages(data || []);
+    setMensagens(data || []);
   };
 
-  const createConversation = async () => {
-    if (!user) return;
+  // Criar nova conversa
+  const criarConversa = async () => {
+    if (!usuario) return;
     
     try {
       const { data, error } = await supabase
         .from('support_conversations')
-        .insert({ consumer_id: user.id, subject: 'Novo atendimento' })
+        .insert({ consumer_id: usuario.id, subject: 'Novo atendimento' })
         .select()
         .single();
 
       if (error) throw error;
       
-      setConversations(prev => [data, ...prev]);
-      setSelectedConversation(data);
+      setConversas(anterior => [data, ...anterior]);
+      setConversaSelecionada(data);
 
-      // Auto response
+      // Resposta automática
       await supabase.from('support_messages').insert({
         conversation_id: data.id,
-        sender_id: user.id,
-        message: AUTO_RESPONSES[0],
+        sender_id: usuario.id,
+        message: RESPOSTAS_AUTOMATICAS[0],
         is_from_bot: true,
       });
-    } catch (error: any) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } catch (erro: any) {
+      toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || !user) return;
+  // Enviar mensagem
+  const enviarMensagem = async () => {
+    if (!novaMensagem.trim() || !conversaSelecionada || !usuario) return;
 
-    setSending(true);
+    setEnviando(true);
     try {
       const { error } = await supabase.from('support_messages').insert({
-        conversation_id: selectedConversation.id,
-        sender_id: user.id,
-        message: newMessage.trim(),
+        conversation_id: conversaSelecionada.id,
+        sender_id: usuario.id,
+        message: novaMensagem.trim(),
         is_from_bot: false,
       });
 
       if (error) throw error;
-      setNewMessage('');
+      setNovaMensagem('');
 
-      // If consumer, send auto-response after 2 seconds
+      // Se for consumidor, enviar resposta automática após 2 segundos
       if (!isSindico) {
         setTimeout(async () => {
-          const randomResponse = AUTO_RESPONSES[Math.floor(Math.random() * AUTO_RESPONSES.length)];
+          const respostaAleatoria = RESPOSTAS_AUTOMATICAS[Math.floor(Math.random() * RESPOSTAS_AUTOMATICAS.length)];
           await supabase.from('support_messages').insert({
-            conversation_id: selectedConversation.id,
-            sender_id: user.id,
-            message: randomResponse,
+            conversation_id: conversaSelecionada.id,
+            sender_id: usuario.id,
+            message: respostaAleatoria,
             is_from_bot: true,
           });
         }, 2000);
       }
-    } catch (error: any) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } catch (erro: any) {
+      toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
     } finally {
-      setSending(false);
+      setEnviando(false);
     }
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // Formatar hora
+  const formatarHora = (dataString: string) => {
+    return new Date(dataString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  // Formatar data curta
+  const formatarData = (dataString: string) => {
+    return new Date(dataString).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
-  if (loading) {
+  if (carregando) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -195,48 +206,48 @@ export default function Support() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="rounded-xl gradient-sunset p-5 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold md:text-2xl">Apoio ao Cliente</h1>
             <p className="text-white/80 text-sm">Chat com a administração do condomínio</p>
           </div>
-          {supportPhone && (
-            <a href={`tel:${supportPhone}`} className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
+          {telefoneSuporte && (
+            <a href={`tel:${telefoneSuporte}`} className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
               <Phone className="h-4 w-4" />
-              <span className="text-sm font-medium">{supportPhone}</span>
+              <span className="text-sm font-medium">{telefoneSuporte}</span>
             </a>
           )}
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[300px_1fr] h-[calc(100vh-280px)]">
-        {/* Conversations list */}
+        {/* Lista de conversas */}
         <Card className="flex flex-col">
           <CardHeader className="pb-3 flex-shrink-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Conversas</CardTitle>
-              <Button size="sm" onClick={createConversation} className="gap-1">
+              <Button size="sm" onClick={criarConversa} className="gap-1">
                 <Plus className="h-3 w-3" /> Nova
               </Button>
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto p-2">
-            {conversations.length === 0 ? (
+            {conversas.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Nenhuma conversa</p>
               </div>
             ) : (
               <div className="space-y-1">
-                {conversations.map((conv) => (
+                {conversas.map((conv) => (
                   <div
                     key={conv.id}
-                    onClick={() => setSelectedConversation(conv)}
+                    onClick={() => setConversaSelecionada(conv)}
                     className={cn(
                       "p-3 rounded-lg cursor-pointer transition-colors",
-                      selectedConversation?.id === conv.id
+                      conversaSelecionada?.id === conv.id
                         ? "bg-primary/10 border border-primary/30"
                         : "hover:bg-muted/50"
                     )}
@@ -247,7 +258,7 @@ export default function Support() {
                         {conv.status}
                       </Badge>
                     </div>
-                    <span className="text-xs text-muted-foreground">{formatDate(conv.created_at)}</span>
+                    <span className="text-xs text-muted-foreground">{formatarData(conv.created_at)}</span>
                   </div>
                 ))}
               </div>
@@ -255,19 +266,19 @@ export default function Support() {
           </CardContent>
         </Card>
 
-        {/* Chat area */}
+        {/* Área do chat */}
         <Card className="flex flex-col">
-          {selectedConversation ? (
+          {conversaSelecionada ? (
             <>
               <CardHeader className="pb-3 border-b flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSelectedConversation(null)}>
+                  <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setConversaSelecionada(null)}>
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <div>
-                    <CardTitle className="text-base">{selectedConversation.subject}</CardTitle>
+                    <CardTitle className="text-base">{conversaSelecionada.subject}</CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      Iniciada em {formatDate(selectedConversation.created_at)}
+                      Iniciada em {formatarData(conversaSelecionada.created_at)}
                     </p>
                   </div>
                 </div>
@@ -275,52 +286,52 @@ export default function Support() {
               <CardContent className="flex-1 overflow-hidden p-0">
                 <ScrollArea className="h-full p-4">
                   <div className="space-y-3">
-                    {messages.map((msg) => {
-                      const isMe = msg.sender_id === user?.id && !msg.is_from_bot;
-                      const isBot = msg.is_from_bot;
+                    {mensagens.map((msg) => {
+                      const souEu = msg.sender_id === usuario?.id && !msg.is_from_bot;
+                      const ehBot = msg.is_from_bot;
                       
                       return (
-                        <div key={msg.id} className={cn("flex", isMe && !isBot ? "justify-end" : "justify-start")}>
+                        <div key={msg.id} className={cn("flex", souEu && !ehBot ? "justify-end" : "justify-start")}>
                           <div className={cn(
                             "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
-                            isBot
+                            ehBot
                               ? "bg-gradient-to-br from-slate-100 to-slate-50 text-slate-700 border"
-                              : isMe
+                              : souEu
                                 ? "bg-gradient-to-br from-primary to-primary/90 text-white"
                                 : "bg-gradient-to-br from-sky-100 to-sky-50 text-sky-900 border"
                           )}>
                             <div className="flex items-center gap-1.5 mb-0.5">
-                              {isBot ? (
+                              {ehBot ? (
                                 <Bot className="h-3 w-3" />
                               ) : (
                                 <User className="h-3 w-3" />
                               )}
                               <span className="text-[10px] font-medium opacity-70">
-                                {isBot ? 'Assistente' : isMe ? 'Você' : 'Atendente'}
+                                {ehBot ? 'Assistente' : souEu ? 'Você' : 'Atendente'}
                               </span>
                             </div>
                             <p>{msg.message}</p>
                             <span className="text-[10px] opacity-60 mt-1 block text-right">
-                              {formatTime(msg.created_at)}
+                              {formatarHora(msg.created_at)}
                             </span>
                           </div>
                         </div>
                       );
                     })}
-                    <div ref={messagesEndRef} />
+                    <div ref={refFimMensagens} />
                   </div>
                 </ScrollArea>
               </CardContent>
               <div className="p-3 border-t flex-shrink-0">
-                <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
+                <form onSubmit={(e) => { e.preventDefault(); enviarMensagem(); }} className="flex gap-2">
                   <Input
                     placeholder="Digite sua mensagem..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    value={novaMensagem}
+                    onChange={(e) => setNovaMensagem(e.target.value)}
                     className="flex-1"
                   />
-                  <Button type="submit" disabled={sending || !newMessage.trim()} size="icon">
-                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  <Button type="submit" disabled={enviando || !novaMensagem.trim()} size="icon">
+                    {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </form>
               </div>

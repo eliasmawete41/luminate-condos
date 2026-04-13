@@ -19,28 +19,30 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/integrations/supabase/types';
 
-type Notification = Database['public']['Tables']['notifications']['Row'];
+type Notificacao = Database['public']['Tables']['notifications']['Row'];
 
-const typeConfig: Record<string, { icon: React.ElementType; color: string; bgColor: string }> = {
-  success: { icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-500/10' },
-  warning: { icon: AlertTriangle, color: 'text-amber-600', bgColor: 'bg-amber-500/10' },
-  error: { icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-500/10' },
-  info: { icon: Info, color: 'text-blue-600', bgColor: 'bg-blue-500/10' },
+// Configuração por tipo de notificação
+const configTipo: Record<string, { icone: React.ElementType; cor: string; corFundo: string }> = {
+  success: { icone: CheckCircle2, cor: 'text-green-600', corFundo: 'bg-green-500/10' },
+  warning: { icone: AlertTriangle, cor: 'text-amber-600', corFundo: 'bg-amber-500/10' },
+  error: { icone: AlertTriangle, cor: 'text-red-600', corFundo: 'bg-red-500/10' },
+  info: { icone: Info, cor: 'text-blue-600', corFundo: 'bg-blue-500/10' },
 };
 
-export default function Notifications() {
+export default function Notificacoes() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user: usuario } = useAuth();
+  const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
+    if (usuario) {
+      buscarNotificacoes();
     }
-  }, [user]);
+  }, [usuario]);
 
-  const fetchNotifications = async () => {
+  // Buscar notificações do banco
+  const buscarNotificacoes = async () => {
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -48,17 +50,18 @@ export default function Notifications() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setNotifications(data || []);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+      setNotificacoes(data || []);
+    } catch (erro) {
+      console.error('Erro ao buscar notificações:', erro);
     } finally {
-      setLoading(false);
+      setCarregando(false);
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const contagemNaoLidas = notificacoes.filter(n => !n.is_read).length;
 
-  const markAsRead = async (id: string) => {
+  // Marcar notificação como lida
+  const marcarComoLida = async (id: string) => {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -67,49 +70,51 @@ export default function Notifications() {
 
       if (error) throw error;
 
-      setNotifications(prev => 
-        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+      setNotificacoes(anterior => 
+        anterior.map(n => n.id === id ? { ...n, is_read: true } : n)
       );
-    } catch (error) {
-      console.error('Error marking as read:', error);
+    } catch (erro) {
+      console.error('Erro ao marcar como lida:', erro);
     }
   };
 
-  const markAllAsRead = async () => {
+  // Marcar todas como lidas
+  const marcarTodasComoLidas = async () => {
     try {
-      const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+      const idsNaoLidas = notificacoes.filter(n => !n.is_read).map(n => n.id);
       
-      if (unreadIds.length === 0) return;
+      if (idsNaoLidas.length === 0) return;
 
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
-        .in('id', unreadIds);
+        .in('id', idsNaoLidas);
 
       if (error) throw error;
 
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotificacoes(anterior => anterior.map(n => ({ ...n, is_read: true })));
       toast({ title: 'Todas as notificações marcadas como lidas' });
-    } catch (error) {
-      console.error('Error marking all as read:', error);
+    } catch (erro) {
+      console.error('Erro ao marcar todas como lidas:', erro);
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
+  // Formatar data relativa
+  const formatarData = (dataString: string | null) => {
+    if (!dataString) return '';
+    const data = new Date(dataString);
+    const agora = new Date();
+    const diferenca = agora.getTime() - data.getTime();
+    const horas = Math.floor(diferenca / (1000 * 60 * 60));
+    const dias = Math.floor(horas / 24);
 
-    if (hours < 1) return 'Agora mesmo';
-    if (hours < 24) return `${hours}h atrás`;
-    if (days < 7) return `${days} dia${days > 1 ? 's' : ''} atrás`;
-    return date.toLocaleDateString('pt-BR');
+    if (horas < 1) return 'Agora mesmo';
+    if (horas < 24) return `${horas}h atrás`;
+    if (dias < 7) return `${dias} dia${dias > 1 ? 's' : ''} atrás`;
+    return data.toLocaleDateString('pt-BR');
   };
 
-  if (loading) {
+  if (carregando) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -119,7 +124,7 @@ export default function Notifications() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Notificações</h1>
@@ -127,22 +132,22 @@ export default function Notifications() {
             Alertas e avisos do sistema de monitoramento
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" onClick={markAllAsRead} className="gap-2">
+        {contagemNaoLidas > 0 && (
+          <Button variant="outline" onClick={marcarTodasComoLidas} className="gap-2">
             <CheckCheck className="h-4 w-4" />
             Marcar todas como lidas
           </Button>
         )}
       </div>
 
-      {/* Stats */}
+      {/* Estatísticas */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{notifications.length}</p>
+                <p className="text-2xl font-bold">{notificacoes.length}</p>
               </div>
               <div className="p-3 rounded-full bg-primary/10 text-primary">
                 <Bell className="h-5 w-5" />
@@ -155,9 +160,9 @@ export default function Notifications() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Não lidas</p>
-                <p className="text-2xl font-bold">{unreadCount}</p>
+                <p className="text-2xl font-bold">{contagemNaoLidas}</p>
               </div>
-              <Badge className="bg-primary">{unreadCount}</Badge>
+              <Badge className="bg-primary">{contagemNaoLidas}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -167,7 +172,7 @@ export default function Notifications() {
               <div>
                 <p className="text-sm text-muted-foreground">Alertas</p>
                 <p className="text-2xl font-bold">
-                  {notifications.filter(n => n.type === 'warning' || n.type === 'error').length}
+                  {notificacoes.filter(n => n.type === 'warning' || n.type === 'error').length}
                 </p>
               </div>
               <div className="p-3 rounded-full bg-amber-500/10 text-amber-600">
@@ -182,7 +187,7 @@ export default function Notifications() {
               <div>
                 <p className="text-sm text-muted-foreground">Manutenções</p>
                 <p className="text-2xl font-bold">
-                  {notifications.filter(n => n.related_pole_id || n.related_maintenance_id).length}
+                  {notificacoes.filter(n => n.related_pole_id || n.related_maintenance_id).length}
                 </p>
               </div>
               <div className="p-3 rounded-full bg-blue-500/10 text-blue-600">
@@ -193,7 +198,7 @@ export default function Notifications() {
         </Card>
       </div>
 
-      {/* Notifications List */}
+      {/* Lista de Notificações */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -201,59 +206,59 @@ export default function Notifications() {
             Todas as Notificações
           </CardTitle>
           <CardDescription>
-            {notifications.length} notificações no total
+            {notificacoes.length} notificações no total
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {notifications.length === 0 ? (
+            {notificacoes.length === 0 ? (
               <div className="text-center py-12">
                 <Bell className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
                 <p className="text-muted-foreground">Nenhuma notificação</p>
               </div>
             ) : (
-              notifications.map((notification) => {
-                const config = typeConfig[notification.type || 'info'];
-                const Icon = config.icon;
+              notificacoes.map((notificacao) => {
+                const config = configTipo[notificacao.type || 'info'];
+                const Icone = config.icone;
 
                 return (
                   <div
-                    key={notification.id}
+                    key={notificacao.id}
                     className={cn(
                       "flex gap-4 p-4 rounded-lg border transition-colors cursor-pointer",
-                      notification.is_read 
+                      notificacao.is_read 
                         ? "bg-card hover:bg-muted/50" 
                         : "bg-accent/30 border-primary/20"
                     )}
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={() => marcarComoLida(notificacao.id)}
                   >
-                    <div className={cn("p-2 rounded-full shrink-0 h-fit", config.bgColor)}>
-                      <Icon className={cn("h-5 w-5", config.color)} />
+                    <div className={cn("p-2 rounded-full shrink-0 h-fit", config.corFundo)}>
+                      <Icone className={cn("h-5 w-5", config.cor)} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className={cn(
                             "font-medium",
-                            !notification.is_read && "text-foreground"
+                            !notificacao.is_read && "text-foreground"
                           )}>
-                            {notification.title}
+                            {notificacao.title}
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {notification.message}
+                            {notificacao.message}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {!notification.is_read && (
+                          {!notificacao.is_read && (
                             <div className="h-2 w-2 rounded-full bg-primary" />
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mt-2">
                         <span className="text-xs text-muted-foreground">
-                          {formatDate(notification.created_at)}
+                          {formatarData(notificacao.created_at)}
                         </span>
-                        {notification.related_pole_id && (
+                        {notificacao.related_pole_id && (
                           <Badge variant="outline" className="text-xs">
                             <Lamp className="mr-1 h-3 w-3" />
                             Poste relacionado

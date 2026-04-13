@@ -7,7 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix default marker icons
+// Corrigir ícones padrão dos marcadores
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -15,14 +15,16 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-const statusColors: Record<string, string> = {
+// Cores por status
+const coresStatus: Record<string, string> = {
   funcionando: '#22c55e',
   com_falha: '#f59e0b',
   em_manutencao: '#3b82f6',
   desativado: '#6b7280',
 };
 
-interface Pole {
+// Interface do poste no mapa
+interface PosteMapa {
   id: string;
   code: string;
   location_description: string;
@@ -33,32 +35,34 @@ interface Pole {
   power_watts: number;
 }
 
-function createColoredIcon(color: string) {
+// Criar ícone colorido para marcador
+function criarIconeColorido(cor: string) {
   return L.divIcon({
     className: '',
-    html: `<div style="background:${color};width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
+    html: `<div style="background:${cor};width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
 }
 
-export default function MapPage() {
-  const [poles, setPoles] = useState<Pole[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function PaginaMapa() {
+  const [postes, setPostes] = useState<PosteMapa[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    fetchPoles();
+    buscarPostes();
   }, []);
 
-  const fetchPoles = async () => {
+  // Buscar postes com coordenadas
+  const buscarPostes = async () => {
     const { data } = await supabase
       .from('poles')
       .select('id, code, location_description, latitude, longitude, status, lighting_type, power_watts');
-    setPoles((data || []).filter((p: any) => p.latitude && p.longitude));
-    setLoading(false);
+    setPostes((data || []).filter((p: any) => p.latitude && p.longitude));
+    setCarregando(false);
   };
 
-  if (loading) {
+  if (carregando) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -66,9 +70,10 @@ export default function MapPage() {
     );
   }
 
-  const center: [number, number] = poles.length > 0
-    ? [poles[0].latitude!, poles[0].longitude!]
-    : [-8.838333, 13.234444]; // Luanda default
+  // Centro do mapa (primeiro poste ou Luanda como padrão)
+  const centro: [number, number] = postes.length > 0
+    ? [postes[0].latitude!, postes[0].longitude!]
+    : [-8.838333, 13.234444];
 
   return (
     <div className="space-y-4">
@@ -84,7 +89,7 @@ export default function MapPage() {
         <CardContent className="p-0">
           <div className="h-[calc(100vh-280px)] min-h-[400px]">
             <MapContainer
-              center={center}
+              center={centro}
               zoom={15}
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={true}
@@ -93,19 +98,19 @@ export default function MapPage() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              {poles.map((pole) => (
+              {postes.map((poste) => (
                 <Marker
-                  key={pole.id}
-                  position={[pole.latitude!, pole.longitude!]}
-                  icon={createColoredIcon(statusColors[pole.status || 'funcionando'])}
+                  key={poste.id}
+                  position={[poste.latitude!, poste.longitude!]}
+                  icon={criarIconeColorido(coresStatus[poste.status || 'funcionando'])}
                 >
                   <Popup>
                     <div className="text-sm space-y-1">
-                      <p className="font-bold">{pole.code}</p>
-                      <p>{pole.location_description}</p>
-                      <p>Tipo: {pole.lighting_type}</p>
-                      <p>Potência: {pole.power_watts}W</p>
-                      <p>Status: {pole.status || 'funcionando'}</p>
+                      <p className="font-bold">{poste.code}</p>
+                      <p>{poste.location_description}</p>
+                      <p>Tipo: {poste.lighting_type}</p>
+                      <p>Potência: {poste.power_watts}W</p>
+                      <p>Status: {poste.status || 'funcionando'}</p>
                     </div>
                   </Popup>
                 </Marker>
@@ -115,11 +120,11 @@ export default function MapPage() {
         </CardContent>
       </Card>
 
-      {/* Legend */}
+      {/* Legenda */}
       <div className="flex flex-wrap gap-4">
-        {Object.entries(statusColors).map(([status, color]) => (
+        {Object.entries(coresStatus).map(([status, cor]) => (
           <div key={status} className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
+            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: cor }} />
             <span className="text-sm capitalize">{status.replace('_', ' ')}</span>
           </div>
         ))}

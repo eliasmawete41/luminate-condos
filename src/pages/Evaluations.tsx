@@ -17,7 +17,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-interface Evaluation {
+// Interface de avaliação
+interface Avaliacao {
   id: string;
   type: string;
   rating: number;
@@ -25,85 +26,88 @@ interface Evaluation {
   created_at: string;
 }
 
-export default function Evaluations() {
-  const { user } = useAuth();
+export default function Avaliacoes() {
+  const { user: usuario } = useAuth();
   const { toast } = useToast();
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
 
-  // Form
-  const [systemRating, setSystemRating] = useState(0);
-  const [serviceRating, setServiceRating] = useState(0);
-  const [systemComment, setSystemComment] = useState('');
-  const [serviceComment, setServiceComment] = useState('');
+  // Formulário
+  const [notaSistema, setNotaSistema] = useState(0);
+  const [notaAtendimento, setNotaAtendimento] = useState(0);
+  const [comentarioSistema, setComentarioSistema] = useState('');
+  const [comentarioAtendimento, setComentarioAtendimento] = useState('');
 
   useEffect(() => {
-    fetchEvaluations();
+    buscarAvaliacoes();
   }, []);
 
-  const fetchEvaluations = async () => {
+  // Buscar avaliações do usuário
+  const buscarAvaliacoes = async () => {
     try {
       const { data } = await supabase
         .from('evaluations')
         .select('*')
         .order('created_at', { ascending: false });
-      setEvaluations(data || []);
-    } catch (error) {
-      console.error('Error:', error);
+      setAvaliacoes(data || []);
+    } catch (erro) {
+      console.error('Erro:', erro);
     } finally {
-      setLoading(false);
+      setCarregando(false);
     }
   };
 
-  const submitEvaluation = async (type: string, rating: number, comment: string) => {
-    if (!user || rating === 0) {
+  // Enviar avaliação
+  const enviarAvaliacao = async (tipo: string, nota: number, comentario: string) => {
+    if (!usuario || nota === 0) {
       toast({ title: 'Selecione uma avaliação', variant: 'destructive' });
       return;
     }
 
-    setSending(true);
+    setEnviando(true);
     try {
       const { error } = await supabase.from('evaluations').insert({
-        user_id: user.id,
-        type,
-        rating,
-        comment: comment || null,
+        user_id: usuario.id,
+        type: tipo,
+        rating: nota,
+        comment: comentario || null,
       });
 
       if (error) throw error;
 
       toast({ title: 'Avaliação enviada!', description: 'Obrigado pelo seu feedback.' });
       
-      if (type === 'sistema') {
-        setSystemRating(0);
-        setSystemComment('');
+      if (tipo === 'sistema') {
+        setNotaSistema(0);
+        setComentarioSistema('');
       } else {
-        setServiceRating(0);
-        setServiceComment('');
+        setNotaAtendimento(0);
+        setComentarioAtendimento('');
       }
       
-      fetchEvaluations();
-    } catch (error: any) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      buscarAvaliacoes();
+    } catch (erro: any) {
+      toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
     } finally {
-      setSending(false);
+      setEnviando(false);
     }
   };
 
-  const StarRating = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => (
+  // Componente de classificação por estrelas
+  const ClassificacaoEstrelas = ({ valor, aoAlterar }: { valor: number; aoAlterar: (v: number) => void }) => (
     <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
+      {[1, 2, 3, 4, 5].map((estrela) => (
         <button
-          key={star}
+          key={estrela}
           type="button"
-          onClick={() => onChange(star)}
+          onClick={() => aoAlterar(estrela)}
           className="transition-transform hover:scale-110"
         >
           <Star
             className={cn(
               "h-8 w-8 transition-colors",
-              star <= value
+              estrela <= valor
                 ? "fill-amber-400 text-amber-400"
                 : "text-muted-foreground/30 hover:text-amber-300"
             )}
@@ -113,7 +117,7 @@ export default function Evaluations() {
     </div>
   );
 
-  if (loading) {
+  if (carregando) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -123,7 +127,7 @@ export default function Evaluations() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="rounded-xl gradient-sunset p-5 text-white shadow-lg">
         <h1 className="text-xl font-bold md:text-2xl">Avaliações</h1>
         <p className="text-white/80 text-sm">Sua opinião nos ajuda a melhorar</p>
@@ -141,20 +145,20 @@ export default function Evaluations() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-center">
-              <StarRating value={systemRating} onChange={setSystemRating} />
+              <ClassificacaoEstrelas valor={notaSistema} aoAlterar={setNotaSistema} />
             </div>
             <div>
               <Label>Comentário (opcional)</Label>
               <Textarea
                 placeholder="Conte-nos o que você acha..."
-                value={systemComment}
-                onChange={(e) => setSystemComment(e.target.value)}
+                value={comentarioSistema}
+                onChange={(e) => setComentarioSistema(e.target.value)}
                 className="mt-1.5"
               />
             </div>
             <Button
-              onClick={() => submitEvaluation('sistema', systemRating, systemComment)}
-              disabled={sending || systemRating === 0}
+              onClick={() => enviarAvaliacao('sistema', notaSistema, comentarioSistema)}
+              disabled={enviando || notaSistema === 0}
               className="w-full gap-2"
             >
               <Send className="h-4 w-4" />
@@ -174,20 +178,20 @@ export default function Evaluations() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-center">
-              <StarRating value={serviceRating} onChange={setServiceRating} />
+              <ClassificacaoEstrelas valor={notaAtendimento} aoAlterar={setNotaAtendimento} />
             </div>
             <div>
               <Label>Comentário (opcional)</Label>
               <Textarea
                 placeholder="Como podemos melhorar o atendimento..."
-                value={serviceComment}
-                onChange={(e) => setServiceComment(e.target.value)}
+                value={comentarioAtendimento}
+                onChange={(e) => setComentarioAtendimento(e.target.value)}
                 className="mt-1.5"
               />
             </div>
             <Button
-              onClick={() => submitEvaluation('atendimento', serviceRating, serviceComment)}
-              disabled={sending || serviceRating === 0}
+              onClick={() => enviarAvaliacao('atendimento', notaAtendimento, comentarioAtendimento)}
+              disabled={enviando || notaAtendimento === 0}
               className="w-full gap-2"
             >
               <Send className="h-4 w-4" />
@@ -198,7 +202,7 @@ export default function Evaluations() {
       </div>
 
       {/* Histórico */}
-      {evaluations.length > 0 && (
+      {avaliacoes.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -208,33 +212,33 @@ export default function Evaluations() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {evaluations.map((evaluation) => (
-                <div key={evaluation.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              {avaliacoes.map((avaliacao) => (
+                <div key={avaliacao.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={evaluation.type === 'sistema' ? 'border-violet-300 text-violet-600' : 'border-emerald-300 text-emerald-600'}>
-                      {evaluation.type === 'sistema' ? 'Sistema' : 'Atendimento'}
+                    <Badge variant="outline" className={avaliacao.type === 'sistema' ? 'border-violet-300 text-violet-600' : 'border-emerald-300 text-emerald-600'}>
+                      {avaliacao.type === 'sistema' ? 'Sistema' : 'Atendimento'}
                     </Badge>
                     <div className="flex gap-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
+                      {[1, 2, 3, 4, 5].map((estrela) => (
                         <Star
-                          key={star}
+                          key={estrela}
                           className={cn(
                             "h-4 w-4",
-                            star <= evaluation.rating
+                            estrela <= avaliacao.rating
                               ? "fill-amber-400 text-amber-400"
                               : "text-muted-foreground/20"
                           )}
                         />
                       ))}
                     </div>
-                    {evaluation.comment && (
+                    {avaliacao.comment && (
                       <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-                        {evaluation.comment}
+                        {avaliacao.comment}
                       </span>
                     )}
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(evaluation.created_at).toLocaleDateString('pt-BR')}
+                    {new Date(avaliacao.created_at).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
               ))}
