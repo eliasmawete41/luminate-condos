@@ -15,12 +15,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function Settings() {
-  const { profile } = useAuth();
+export default function Configuracoes() {
+  const { profile: perfil } = useAuth();
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Configurações</h1>
         <p className="text-muted-foreground">
@@ -29,7 +29,7 @@ export default function Settings() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Profile Card */}
+        {/* Cartão de Perfil */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -44,9 +44,9 @@ export default function Settings() {
             <div className="flex items-center gap-6">
               <div className="relative">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarImage src={perfil?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                    {profile?.full_name?.charAt(0) || 'U'}
+                    {perfil?.full_name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <Button
@@ -58,8 +58,8 @@ export default function Settings() {
                 </Button>
               </div>
               <div>
-                <p className="font-medium">{profile?.full_name || 'Usuário'}</p>
-                <p className="text-sm text-muted-foreground">{profile?.email}</p>
+                <p className="font-medium">{perfil?.full_name || 'Usuário'}</p>
+                <p className="text-sm text-muted-foreground">{perfil?.email}</p>
               </div>
             </div>
 
@@ -67,16 +67,16 @@ export default function Settings() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo</Label>
-                <Input id="name" defaultValue={profile?.full_name || ''} />
+                <Label htmlFor="nome">Nome Completo</Label>
+                <Input id="nome" defaultValue={perfil?.full_name || ''} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue={profile?.email || ''} disabled />
+                <Input id="email" type="email" defaultValue={perfil?.email || ''} disabled />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
-                <Input id="phone" defaultValue={profile?.phone || ''} placeholder="(11) 99999-9999" />
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input id="telefone" defaultValue={perfil?.phone || ''} placeholder="(11) 99999-9999" />
               </div>
             </div>
 
@@ -89,9 +89,9 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
+        {/* Ações Rápidas */}
         <div className="space-y-6">
-          {/* Notifications Card */}
+          {/* Cartão de Notificações */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -131,7 +131,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Appearance Card */}
+          {/* Cartão de Aparência */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -150,7 +150,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Security Card */}
+          {/* Cartão de Segurança */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">

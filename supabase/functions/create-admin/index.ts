@@ -1,67 +1,67 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
+const cabecalhosCors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: cabecalhosCors })
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const urlSupabase = Deno.env.get('SUPABASE_URL')!
+    const chaveServico = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    const supabase = createClient(urlSupabase, chaveServico, {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
-    // Check if admin already exists
-    const { data: existingUsers } = await supabase.auth.admin.listUsers()
-    const adminExists = existingUsers?.users?.some(u => u.email === 'admin@projetofimdecurso.com')
+    // Verificar se o admin já existe
+    const { data: usuariosExistentes } = await supabase.auth.admin.listUsers()
+    const adminExiste = usuariosExistentes?.users?.some(u => u.email === 'admin@projetofimdecurso.com')
 
-    if (adminExists) {
-      return new Response(JSON.stringify({ message: 'Admin already exists' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (adminExiste) {
+      return new Response(JSON.stringify({ message: 'Admin já existe' }), {
+        headers: { ...cabecalhosCors, 'Content-Type': 'application/json' },
       })
     }
 
-    // Create admin user
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+    // Criar usuário admin
+    const { data: novoUsuario, error: erroCriacao } = await supabase.auth.admin.createUser({
       email: 'admin@projetofimdecurso.com',
       password: 'admin123',
       email_confirm: true,
       user_metadata: { full_name: 'Administrador Principal' }
     })
 
-    if (createError) throw createError
+    if (erroCriacao) throw erroCriacao
 
-    // Set admin role
-    if (newUser.user) {
-      // Update role from default 'morador' to 'admin'
-      const { error: roleError } = await supabase
+    // Definir papel de admin
+    if (novoUsuario.user) {
+      // Atualizar papel de 'morador' para 'admin'
+      const { error: erroPapel } = await supabase
         .from('user_roles')
         .update({ role: 'admin' })
-        .eq('user_id', newUser.user.id)
+        .eq('user_id', novoUsuario.user.id)
 
-      if (roleError) {
-        // If update fails, insert
+      if (erroPapel) {
+        // Se atualização falhar, inserir
         await supabase.from('user_roles').insert({
-          user_id: newUser.user.id,
+          user_id: novoUsuario.user.id,
           role: 'admin'
         })
       }
     }
 
-    return new Response(JSON.stringify({ message: 'Admin created successfully' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ message: 'Admin criado com sucesso' }), {
+      headers: { ...cabecalhosCors, 'Content-Type': 'application/json' },
     })
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (erro) {
+    return new Response(JSON.stringify({ error: erro.message }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...cabecalhosCors, 'Content-Type': 'application/json' },
     })
   }
 })

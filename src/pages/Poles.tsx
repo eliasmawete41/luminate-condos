@@ -26,185 +26,196 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/integrations/supabase/types';
 
-type Pole = Database['public']['Tables']['poles']['Row'];
-type PoleInsert = Database['public']['Tables']['poles']['Insert'];
+type Poste = Database['public']['Tables']['poles']['Row'];
+type PosteInsercao = Database['public']['Tables']['poles']['Insert'];
 
-const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  funcionando: { label: 'Funcionando', icon: CheckCircle2, color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },
-  com_falha: { label: 'Com Falha', icon: AlertTriangle, color: 'bg-amber-500/10 text-amber-600 border-amber-200' },
-  em_manutencao: { label: 'Em Manutenção', icon: Wrench, color: 'bg-blue-500/10 text-blue-600 border-blue-200' },
-  desativado: { label: 'Desativado', icon: XCircle, color: 'bg-slate-500/10 text-slate-600 border-slate-200' },
+// Configuração de status dos postes
+const configStatus: Record<string, { rotulo: string; icone: React.ElementType; cor: string }> = {
+  funcionando: { rotulo: 'Funcionando', icone: CheckCircle2, cor: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },
+  com_falha: { rotulo: 'Com Falha', icone: AlertTriangle, cor: 'bg-amber-500/10 text-amber-600 border-amber-200' },
+  em_manutencao: { rotulo: 'Em Manutenção', icone: Wrench, cor: 'bg-blue-500/10 text-blue-600 border-blue-200' },
+  desativado: { rotulo: 'Desativado', icone: XCircle, cor: 'bg-slate-500/10 text-slate-600 border-slate-200' },
 };
 
-const lightingTypes: Record<string, string> = {
+// Tipos de iluminação
+const tiposIluminacao: Record<string, string> = {
   led: 'LED', fluorescente: 'Fluorescente', solar: 'Solar',
   halogenea: 'Halógena', vapor_sodio: 'Vapor de Sódio', vapor_mercurio: 'Vapor de Mercúrio',
 };
 
-export default function Poles() {
+export default function Postes() {
   const { toast } = useToast();
   const { isManutencao, isSindico } = useAuth();
-  const [poles, setPoles] = useState<Pole[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingPole, setEditingPole] = useState<Pole | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [postes, setPostes] = useState<Poste[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [termoBusca, setTermoBusca] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState<string>('all');
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [dialogEdicaoAberto, setDialogEdicaoAberto] = useState(false);
+  const [posteEditando, setPosteEditando] = useState<Poste | null>(null);
+  const [salvando, setSalvando] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [dadosFormulario, setDadosFormulario] = useState({
     code: '', location_description: '', lighting_type: '' as any,
     power_watts: '', installation_date: '', lamp_lifespan_hours: '50000',
     maintenance_company: '', latitude: '', longitude: '',
   });
 
-  useEffect(() => { fetchPoles(); }, []);
+  useEffect(() => { buscarPostes(); }, []);
 
-  const fetchPoles = async () => {
+  // Buscar postes do banco de dados
+  const buscarPostes = async () => {
     try {
       const { data, error } = await supabase.from('poles').select('*').order('code', { ascending: true });
       if (error) throw error;
-      setPoles(data || []);
-    } catch (error) {
+      setPostes(data || []);
+    } catch (erro) {
       toast({ title: 'Erro', description: 'Não foi possível carregar os postes', variant: 'destructive' });
-    } finally { setLoading(false); }
+    } finally { setCarregando(false); }
   };
 
-  const handleCreatePole = async () => {
-    if (!formData.code || !formData.location_description || !formData.lighting_type || !formData.power_watts) {
+  // Criar novo poste
+  const criarPoste = async () => {
+    if (!dadosFormulario.code || !dadosFormulario.location_description || !dadosFormulario.lighting_type || !dadosFormulario.power_watts) {
       toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
-    setSaving(true);
+    setSalvando(true);
     try {
-      const newPole: PoleInsert = {
-        code: formData.code, location_description: formData.location_description,
-        lighting_type: formData.lighting_type, power_watts: parseInt(formData.power_watts),
-        installation_date: formData.installation_date || null,
-        lamp_lifespan_hours: parseInt(formData.lamp_lifespan_hours) || 50000,
-        maintenance_company: formData.maintenance_company || null,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+      const novoPoste: PosteInsercao = {
+        code: dadosFormulario.code, location_description: dadosFormulario.location_description,
+        lighting_type: dadosFormulario.lighting_type, power_watts: parseInt(dadosFormulario.power_watts),
+        installation_date: dadosFormulario.installation_date || null,
+        lamp_lifespan_hours: parseInt(dadosFormulario.lamp_lifespan_hours) || 50000,
+        maintenance_company: dadosFormulario.maintenance_company || null,
+        latitude: dadosFormulario.latitude ? parseFloat(dadosFormulario.latitude) : null,
+        longitude: dadosFormulario.longitude ? parseFloat(dadosFormulario.longitude) : null,
       };
-      const { error } = await supabase.from('poles').insert(newPole);
+      const { error } = await supabase.from('poles').insert(novoPoste);
       if (error) throw error;
       toast({ title: 'Poste cadastrado com sucesso' });
-      setIsDialogOpen(false);
-      setFormData({ code: '', location_description: '', lighting_type: '', power_watts: '', installation_date: '', lamp_lifespan_hours: '50000', maintenance_company: '', latitude: '', longitude: '' });
-      fetchPoles();
-    } catch (error: any) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } finally { setSaving(false); }
+      setDialogAberto(false);
+      setDadosFormulario({ code: '', location_description: '', lighting_type: '', power_watts: '', installation_date: '', lamp_lifespan_hours: '50000', maintenance_company: '', latitude: '', longitude: '' });
+      buscarPostes();
+    } catch (erro: any) {
+      toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
+    } finally { setSalvando(false); }
   };
 
-  const handleEditPole = async () => {
-    if (!editingPole) return;
-    setSaving(true);
+  // Editar poste existente
+  const editarPoste = async () => {
+    if (!posteEditando) return;
+    setSalvando(true);
     try {
       const { error } = await supabase.from('poles').update({
-        code: formData.code, location_description: formData.location_description,
-        lighting_type: formData.lighting_type, power_watts: parseInt(formData.power_watts),
-        maintenance_company: formData.maintenance_company || null,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-      }).eq('id', editingPole.id);
+        code: dadosFormulario.code, location_description: dadosFormulario.location_description,
+        lighting_type: dadosFormulario.lighting_type, power_watts: parseInt(dadosFormulario.power_watts),
+        maintenance_company: dadosFormulario.maintenance_company || null,
+        latitude: dadosFormulario.latitude ? parseFloat(dadosFormulario.latitude) : null,
+        longitude: dadosFormulario.longitude ? parseFloat(dadosFormulario.longitude) : null,
+      }).eq('id', posteEditando.id);
       if (error) throw error;
       toast({ title: 'Poste atualizado com sucesso' });
-      setEditDialogOpen(false);
-      setEditingPole(null);
-      fetchPoles();
-    } catch (error: any) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } finally { setSaving(false); }
+      setDialogEdicaoAberto(false);
+      setPosteEditando(null);
+      buscarPostes();
+    } catch (erro: any) {
+      toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
+    } finally { setSalvando(false); }
   };
 
-  const handleChangeStatus = async (poleId: string, newStatus: string) => {
+  // Alterar status do poste
+  const alterarStatus = async (idPoste: string, novoStatus: string) => {
     try {
-      const { error } = await supabase.from('poles').update({ status: newStatus as any }).eq('id', poleId);
+      const { error } = await supabase.from('poles').update({ status: novoStatus as any }).eq('id', idPoste);
       if (error) throw error;
-      toast({ title: `Status atualizado para ${statusConfig[newStatus]?.label}` });
-      fetchPoles();
-    } catch (error: any) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      toast({ title: `Status atualizado para ${configStatus[novoStatus]?.rotulo}` });
+      buscarPostes();
+    } catch (erro: any) {
+      toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
     }
   };
 
-  const handleDeletePole = async (poleId: string) => {
+  // Excluir poste
+  const excluirPoste = async (idPoste: string) => {
     try {
-      const { error } = await supabase.from('poles').delete().eq('id', poleId);
+      const { error } = await supabase.from('poles').delete().eq('id', idPoste);
       if (error) throw error;
       toast({ title: 'Poste removido com sucesso' });
-      fetchPoles();
-    } catch (error: any) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      buscarPostes();
+    } catch (erro: any) {
+      toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
     }
   };
 
-  const openEditDialog = (pole: Pole) => {
-    setEditingPole(pole);
-    setFormData({
-      code: pole.code, location_description: pole.location_description,
-      lighting_type: pole.lighting_type, power_watts: pole.power_watts.toString(),
-      installation_date: pole.installation_date || '', lamp_lifespan_hours: (pole.lamp_lifespan_hours || 50000).toString(),
-      maintenance_company: pole.maintenance_company || '',
-      latitude: pole.latitude?.toString() || '', longitude: pole.longitude?.toString() || '',
+  // Abrir diálogo de edição
+  const abrirDialogoEdicao = (poste: Poste) => {
+    setPosteEditando(poste);
+    setDadosFormulario({
+      code: poste.code, location_description: poste.location_description,
+      lighting_type: poste.lighting_type, power_watts: poste.power_watts.toString(),
+      installation_date: poste.installation_date || '', lamp_lifespan_hours: (poste.lamp_lifespan_hours || 50000).toString(),
+      maintenance_company: poste.maintenance_company || '',
+      latitude: poste.latitude?.toString() || '', longitude: poste.longitude?.toString() || '',
     });
-    setEditDialogOpen(true);
+    setDialogEdicaoAberto(true);
   };
 
-  const filteredPoles = poles.filter(pole => {
-    const matchesSearch = pole.code.toLowerCase().includes(searchTerm.toLowerCase()) || pole.location_description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || pole.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  // Filtrar postes
+  const postesFiltrados = postes.filter(poste => {
+    const correspondeABusca = poste.code.toLowerCase().includes(termoBusca.toLowerCase()) || poste.location_description.toLowerCase().includes(termoBusca.toLowerCase());
+    const correspondeAoStatus = filtroStatus === 'all' || poste.status === filtroStatus;
+    return correspondeABusca && correspondeAoStatus;
   });
 
-  const getLampHealthPercentage = (hours: number | null, lifespan: number | null) => {
-    if (!lifespan || lifespan === 0) return 100;
-    return Math.max(0, Math.round(((lifespan - (hours || 0)) / lifespan) * 100));
+  // Calcular percentual de vida útil da lâmpada
+  const obterPercentualVidaUtil = (horas: number | null, vidaUtil: number | null) => {
+    if (!vidaUtil || vidaUtil === 0) return 100;
+    return Math.max(0, Math.round(((vidaUtil - (horas || 0)) / vidaUtil) * 100));
   };
 
-  if (loading) {
+  if (carregando) {
     return <div className="flex items-center justify-center h-96"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  const poleFormFields = (
+  // Campos do formulário de poste
+  const camposFormularioPoste = (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Código do Poste *</Label>
-          <Input placeholder="Ex: P-001" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} />
+          <Input placeholder="Ex: P-001" value={dadosFormulario.code} onChange={(e) => setDadosFormulario({ ...dadosFormulario, code: e.target.value })} />
         </div>
         <div className="space-y-2">
           <Label>Tipo de Iluminação *</Label>
-          <Select value={formData.lighting_type} onValueChange={(v) => setFormData({ ...formData, lighting_type: v })}>
+          <Select value={dadosFormulario.lighting_type} onValueChange={(v) => setDadosFormulario({ ...dadosFormulario, lighting_type: v })}>
             <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>{Object.entries(lightingTypes).map(([v, l]) => (<SelectItem key={v} value={v}>{l}</SelectItem>))}</SelectContent>
+            <SelectContent>{Object.entries(tiposIluminacao).map(([v, l]) => (<SelectItem key={v} value={v}>{l}</SelectItem>))}</SelectContent>
           </Select>
         </div>
       </div>
       <div className="space-y-2">
         <Label>Localização *</Label>
-        <Input placeholder="Ex: Entrada Principal, Bloco A" value={formData.location_description} onChange={(e) => setFormData({ ...formData, location_description: e.target.value })} />
+        <Input placeholder="Ex: Entrada Principal, Bloco A" value={dadosFormulario.location_description} onChange={(e) => setDadosFormulario({ ...dadosFormulario, location_description: e.target.value })} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Potência (W) *</Label>
-          <Input type="number" placeholder="Ex: 100" value={formData.power_watts} onChange={(e) => setFormData({ ...formData, power_watts: e.target.value })} />
+          <Input type="number" placeholder="Ex: 100" value={dadosFormulario.power_watts} onChange={(e) => setDadosFormulario({ ...dadosFormulario, power_watts: e.target.value })} />
         </div>
         <div className="space-y-2">
           <Label>Empresa de Manutenção</Label>
-          <Input placeholder="Nome da empresa" value={formData.maintenance_company} onChange={(e) => setFormData({ ...formData, maintenance_company: e.target.value })} />
+          <Input placeholder="Nome da empresa" value={dadosFormulario.maintenance_company} onChange={(e) => setDadosFormulario({ ...dadosFormulario, maintenance_company: e.target.value })} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Latitude</Label>
-          <Input type="number" step="any" placeholder="-23.5505" value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} />
+          <Input type="number" step="any" placeholder="-23.5505" value={dadosFormulario.latitude} onChange={(e) => setDadosFormulario({ ...dadosFormulario, latitude: e.target.value })} />
         </div>
         <div className="space-y-2">
           <Label>Longitude</Label>
-          <Input type="number" step="any" placeholder="-46.6333" value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} />
+          <Input type="number" step="any" placeholder="-46.6333" value={dadosFormulario.longitude} onChange={(e) => setDadosFormulario({ ...dadosFormulario, longitude: e.target.value })} />
         </div>
       </div>
     </div>
@@ -212,7 +223,7 @@ export default function Poles() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="rounded-2xl gradient-sunset p-6 text-white shadow-xl">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
@@ -223,7 +234,7 @@ export default function Poles() {
             </div>
           </div>
           {isManutencao && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
               <DialogTrigger asChild>
                 <Button variant="secondary" className="gap-2 shadow-md"><Plus className="h-4 w-4" />Novo Poste</Button>
               </DialogTrigger>
@@ -232,11 +243,11 @@ export default function Poles() {
                   <DialogTitle>Cadastrar Novo Poste</DialogTitle>
                   <DialogDescription>Preencha as informações do novo poste de iluminação</DialogDescription>
                 </DialogHeader>
-                {poleFormFields}
+                {camposFormularioPoste}
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                  <Button onClick={handleCreatePole} disabled={saving}>
-                    {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Salvar
+                  <Button variant="outline" onClick={() => setDialogAberto(false)}>Cancelar</Button>
+                  <Button onClick={criarPoste} disabled={salvando}>
+                    {salvando && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Salvar
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -245,21 +256,21 @@ export default function Poles() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar por código ou localização..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <Input placeholder="Buscar por código ou localização..." className="pl-10" value={termoBusca} onChange={(e) => setTermoBusca(e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
                 <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filtrar por status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os status</SelectItem>
-                  {Object.entries(statusConfig).map(([v, c]) => (<SelectItem key={v} value={v}>{c.label}</SelectItem>))}
+                  {Object.entries(configStatus).map(([v, c]) => (<SelectItem key={v} value={v}>{c.rotulo}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -267,14 +278,14 @@ export default function Poles() {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {/* Tabela */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Lamp className="h-5 w-5 text-primary" />Lista de Postes</CardTitle>
-          <CardDescription>{filteredPoles.length} postes encontrados</CardDescription>
+          <CardDescription>{postesFiltrados.length} postes encontrados</CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredPoles.length > 0 ? (
+          {postesFiltrados.length > 0 ? (
             <div className="rounded-lg border overflow-hidden">
               <Table>
                 <TableHeader>
@@ -289,30 +300,30 @@ export default function Poles() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPoles.map((pole) => {
-                    const status = statusConfig[pole.status || 'funcionando'];
-                    const StatusIcon = status.icon;
-                    const health = getLampHealthPercentage(pole.current_lamp_hours, pole.lamp_lifespan_hours);
+                  {postesFiltrados.map((poste) => {
+                    const status = configStatus[poste.status || 'funcionando'];
+                    const IconeStatus = status.icone;
+                    const saude = obterPercentualVidaUtil(poste.current_lamp_hours, poste.lamp_lifespan_hours);
                     return (
-                      <TableRow key={pole.id} className="hover:bg-muted/50">
+                      <TableRow key={poste.id} className="hover:bg-muted/50">
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary"><Lamp className="h-4 w-4" /></div>
-                            <span className="font-medium">{pole.code}</span>
+                            <span className="font-medium">{poste.code}</span>
                           </div>
                         </TableCell>
-                        <TableCell><div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" />{pole.location_description}</div></TableCell>
-                        <TableCell><Badge variant="outline" className="bg-accent/50">{lightingTypes[pole.lighting_type] || pole.lighting_type}</Badge></TableCell>
-                        <TableCell><div className="flex items-center gap-1"><Zap className="h-4 w-4 text-amber-500" />{pole.power_watts}W</div></TableCell>
-                        <TableCell><Badge variant="outline" className={cn(status.color)}><StatusIcon className="mr-1 h-3 w-3" />{status.label}</Badge></TableCell>
+                        <TableCell><div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" />{poste.location_description}</div></TableCell>
+                        <TableCell><Badge variant="outline" className="bg-accent/50">{tiposIluminacao[poste.lighting_type] || poste.lighting_type}</Badge></TableCell>
+                        <TableCell><div className="flex items-center gap-1"><Zap className="h-4 w-4 text-amber-500" />{poste.power_watts}W</div></TableCell>
+                        <TableCell><Badge variant="outline" className={cn(status.cor)}><IconeStatus className="mr-1 h-3 w-3" />{status.rotulo}</Badge></TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-muted-foreground">Restante</span>
-                              <span className={cn("font-medium", health > 50 ? "text-emerald-600" : health > 20 ? "text-amber-600" : "text-red-600")}>{health}%</span>
+                              <span className={cn("font-medium", saude > 50 ? "text-emerald-600" : saude > 20 ? "text-amber-600" : "text-red-600")}>{saude}%</span>
                             </div>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className={cn("h-full rounded-full transition-all", health > 50 ? "bg-emerald-500" : health > 20 ? "bg-amber-500" : "bg-red-500")} style={{ width: `${health}%` }} />
+                              <div className={cn("h-full rounded-full transition-all", saude > 50 ? "bg-emerald-500" : saude > 20 ? "bg-amber-500" : "bg-red-500")} style={{ width: `${saude}%` }} />
                             </div>
                           </div>
                         </TableCell>
@@ -320,17 +331,17 @@ export default function Poles() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditDialog(pole)}><Pencil className="h-3.5 w-3.5 mr-2" />Editar</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => abrirDialogoEdicao(poste)}><Pencil className="h-3.5 w-3.5 mr-2" />Editar</DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              {Object.entries(statusConfig).filter(([k]) => k !== pole.status).map(([k, v]) => (
-                                <DropdownMenuItem key={k} onClick={() => handleChangeStatus(pole.id, k)}>
-                                  <v.icon className="h-3.5 w-3.5 mr-2" />{v.label}
+                              {Object.entries(configStatus).filter(([k]) => k !== poste.status).map(([k, v]) => (
+                                <DropdownMenuItem key={k} onClick={() => alterarStatus(poste.id, k)}>
+                                  <v.icone className="h-3.5 w-3.5 mr-2" />{v.rotulo}
                                 </DropdownMenuItem>
                               ))}
                               {isSindico && (
                                 <>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-destructive" onClick={() => handleDeletePole(pole.id)}>
+                                  <DropdownMenuItem className="text-destructive" onClick={() => excluirPoste(poste.id)}>
                                     <Trash2 className="h-3.5 w-3.5 mr-2" />Excluir
                                   </DropdownMenuItem>
                                 </>
@@ -349,25 +360,25 @@ export default function Poles() {
               <Lamp className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <p className="text-muted-foreground">Nenhum poste encontrado</p>
               {isManutencao && (
-                <Button className="mt-4" onClick={() => setIsDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Cadastrar primeiro poste</Button>
+                <Button className="mt-4" onClick={() => setDialogAberto(true)}><Plus className="h-4 w-4 mr-2" />Cadastrar primeiro poste</Button>
               )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      {/* Diálogo de Edição */}
+      <Dialog open={dialogEdicaoAberto} onOpenChange={setDialogEdicaoAberto}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Editar Poste</DialogTitle>
-            <DialogDescription>Atualize as informações do poste {editingPole?.code}</DialogDescription>
+            <DialogDescription>Atualize as informações do poste {posteEditando?.code}</DialogDescription>
           </DialogHeader>
-          {poleFormFields}
+          {camposFormularioPoste}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleEditPole} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Salvar
+            <Button variant="outline" onClick={() => setDialogEdicaoAberto(false)}>Cancelar</Button>
+            <Button onClick={editarPoste} disabled={salvando}>
+              {salvando && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
