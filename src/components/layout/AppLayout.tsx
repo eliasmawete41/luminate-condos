@@ -43,24 +43,26 @@ export function AppLayout() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+          {/* Cabeçalho com efeito vidro */}
+          <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-4 border-b border-border/50 bg-background/80 backdrop-blur-xl px-4 md:px-6">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground">
+              <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors">
                 <Menu className="h-5 w-5" />
               </SidebarTrigger>
             </div>
             {!isConsumer && (
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground hover:bg-accent">
                   <Bell className="h-5 w-5" />
                 </Button>
               </div>
             )}
           </header>
-          <main className="flex-1 overflow-auto p-4 md:p-6 bg-muted/30">
+          {/* Área de conteúdo principal */}
+          <main className="flex-1 overflow-auto p-4 md:p-6">
             <Outlet />
           </main>
         </div>
