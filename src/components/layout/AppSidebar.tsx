@@ -61,30 +61,31 @@ export function AppSidebar() {
         <NavLink 
           to={item.url} 
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
             isActive(item.url) 
-              ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-              : "text-sidebar-foreground hover:bg-sidebar-accent"
+              ? "gradient-primary text-primary-foreground shadow-lg shadow-primary/20" 
+              : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-white/[0.06]"
           )}
         >
           <item.icon className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>{item.title}</span>}
+          {!collapsed && <span className="font-medium">{item.title}</span>}
         </NavLink>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar-background">
+      {/* Cabeçalho com logo */}
+      <SidebarHeader className="p-4 pb-6">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Zap className="h-6 w-6" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl gradient-primary shadow-lg shadow-primary/25">
+            <Zap className="h-6 w-6 text-primary-foreground" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-lg font-bold text-sidebar-foreground">PosteGuard</span>
-              <span className="text-xs text-sidebar-foreground/60">
+              <span className="text-[11px] text-sidebar-foreground/40 uppercase tracking-wider">
                 {isConsumer ? 'Portal do Morador' : isTechnician ? 'Painel Técnico' : 'Monitoramento'}
               </span>
             </div>
@@ -92,52 +93,53 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-3">
         {isConsumer ? (
           <SidebarGroup>
-            <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Menu</SidebarGroupLabel>
-            <SidebarGroupContent><SidebarMenu>{consumerMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
+            <SidebarGroupLabel className={cn("text-[11px] uppercase tracking-wider text-sidebar-foreground/30 mb-1", collapsed && "sr-only")}>Menu</SidebarGroupLabel>
+            <SidebarGroupContent><SidebarMenu className="space-y-1">{consumerMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
           </SidebarGroup>
         ) : isTechnician ? (
           <SidebarGroup>
-            <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Menu</SidebarGroupLabel>
-            <SidebarGroupContent><SidebarMenu>{technicianMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
+            <SidebarGroupLabel className={cn("text-[11px] uppercase tracking-wider text-sidebar-foreground/30 mb-1", collapsed && "sr-only")}>Menu</SidebarGroupLabel>
+            <SidebarGroupContent><SidebarMenu className="space-y-1">{technicianMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
           </SidebarGroup>
         ) : (
           <>
             <SidebarGroup>
-              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Principal</SidebarGroupLabel>
-              <SidebarGroupContent><SidebarMenu>{adminMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
+              <SidebarGroupLabel className={cn("text-[11px] uppercase tracking-wider text-sidebar-foreground/30 mb-1", collapsed && "sr-only")}>Principal</SidebarGroupLabel>
+              <SidebarGroupContent><SidebarMenu className="space-y-1">{adminMenuItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
             </SidebarGroup>
-            <SidebarGroup>
-              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Administração</SidebarGroupLabel>
-              <SidebarGroupContent><SidebarMenu>{adminManagementItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
+            <SidebarGroup className="mt-4">
+              <SidebarGroupLabel className={cn("text-[11px] uppercase tracking-wider text-sidebar-foreground/30 mb-1", collapsed && "sr-only")}>Administração</SidebarGroupLabel>
+              <SidebarGroupContent><SidebarMenu className="space-y-1">{adminManagementItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
             </SidebarGroup>
-            <SidebarGroup>
-              <SidebarGroupLabel className={cn(collapsed && "sr-only")}>Sistema</SidebarGroupLabel>
-              <SidebarGroupContent><SidebarMenu>{adminUtilityItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
+            <SidebarGroup className="mt-4">
+              <SidebarGroupLabel className={cn("text-[11px] uppercase tracking-wider text-sidebar-foreground/30 mb-1", collapsed && "sr-only")}>Sistema</SidebarGroupLabel>
+              <SidebarGroupContent><SidebarMenu className="space-y-1">{adminUtilityItems.map(renderMenuItem)}</SidebarMenu></SidebarGroupContent>
             </SidebarGroup>
           </>
         )}
       </SidebarContent>
 
+      {/* Rodapé com perfil */}
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <Avatar className="h-9 w-9">
+          <Avatar className="h-9 w-9 ring-2 ring-primary/20">
             <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+            <AvatarFallback className="gradient-primary text-primary-foreground text-sm font-semibold">
               {profile?.full_name?.charAt(0) || 'U'}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.full_name || 'Usuário'}</p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">{profile?.email}</p>
+              <p className="text-xs text-sidebar-foreground/40 truncate">{profile?.email}</p>
             </div>
           )}
           {!collapsed && (
             <Button variant="ghost" size="icon" onClick={signOut}
-              className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+              className="text-sidebar-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors">
               <LogOut className="h-4 w-4" />
             </Button>
           )}

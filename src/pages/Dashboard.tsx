@@ -23,16 +23,16 @@ interface Maintenance {
 interface LightingTypeCount { name: string; value: number; color: string; }
 
 const statusColors: Record<string, string> = {
-  aberto: 'bg-amber-500/15 text-amber-700 border-amber-300',
-  em_andamento: 'bg-sky-500/15 text-sky-700 border-sky-300',
-  concluido: 'bg-emerald-500/15 text-emerald-700 border-emerald-300',
+  aberto: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  em_andamento: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+  concluido: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
 };
 
 const priorityColors: Record<string, string> = {
-  baixa: 'bg-slate-100 text-slate-600',
-  media: 'bg-amber-100 text-amber-700',
-  alta: 'bg-orange-100 text-orange-700',
-  urgente: 'bg-red-100 text-red-700',
+  baixa: 'bg-slate-500/15 text-slate-400',
+  media: 'bg-amber-500/15 text-amber-400',
+  alta: 'bg-orange-500/15 text-orange-400',
+  urgente: 'bg-red-500/15 text-red-400',
 };
 
 const failureTypeLabels: Record<string, string> = {
@@ -99,10 +99,10 @@ export default function Dashboard() {
   if (loading) return <div className="flex items-center justify-center h-96"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const statsData = [
-    { title: 'Total de Postes', value: poleStats.total, icon: Lamp, iconBg: 'bg-violet-500/15', iconColor: 'text-violet-600', gradient: 'from-violet-500/5', borderColor: 'border-l-violet-500' },
-    { title: 'Funcionando', value: poleStats.funcionando, icon: CheckCircle2, iconBg: 'bg-emerald-500/15', iconColor: 'text-emerald-600', gradient: 'from-emerald-500/5', borderColor: 'border-l-emerald-500' },
-    { title: 'Com Falhas', value: poleStats.com_falha, icon: AlertTriangle, iconBg: 'bg-amber-500/15', iconColor: 'text-amber-600', gradient: 'from-amber-500/5', borderColor: 'border-l-amber-500' },
-    { title: 'Em Manutenção', value: poleStats.em_manutencao, icon: Wrench, iconBg: 'bg-sky-500/15', iconColor: 'text-sky-600', gradient: 'from-sky-500/5', borderColor: 'border-l-sky-500' },
+    { title: 'Total de Postes', value: poleStats.total, icon: Lamp, iconBg: 'bg-violet-500/15', iconColor: 'text-violet-400', gradient: 'from-violet-500/5', borderColor: 'border-l-violet-500' },
+    { title: 'Funcionando', value: poleStats.funcionando, icon: CheckCircle2, iconBg: 'bg-emerald-500/15', iconColor: 'text-emerald-400', gradient: 'from-emerald-500/5', borderColor: 'border-l-emerald-500' },
+    { title: 'Com Falhas', value: poleStats.com_falha, icon: AlertTriangle, iconBg: 'bg-amber-500/15', iconColor: 'text-amber-400', gradient: 'from-amber-500/5', borderColor: 'border-l-amber-500' },
+    { title: 'Em Manutenção', value: poleStats.em_manutencao, icon: Wrench, iconBg: 'bg-sky-500/15', iconColor: 'text-sky-400', gradient: 'from-sky-500/5', borderColor: 'border-l-sky-500' },
   ];
 
   return (
@@ -126,7 +126,7 @@ export default function Dashboard() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat) => (
-          <Card key={stat.title} className={cn("border-l-4 hover:shadow-md transition-shadow", stat.borderColor)}>
+          <Card key={stat.title} className={cn("border-l-4 glass-card hover:shadow-lg transition-all", stat.borderColor)}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
               <div className={cn("p-2.5 rounded-xl", stat.iconBg)}><stat.icon className={cn("h-5 w-5", stat.iconColor)} /></div>
@@ -147,20 +147,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-300/30">
-                <div className="flex items-center gap-2 mb-2"><CheckCircle2 className="h-5 w-5 text-emerald-600" /><span className="font-medium text-emerald-700">Operacionais</span></div>
-                <p className="text-3xl font-bold text-emerald-700">{poleStats.funcionando}</p>
-                <p className="text-sm text-emerald-600/70">postes funcionando</p>
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <div className="flex items-center gap-2 mb-2"><CheckCircle2 className="h-5 w-5 text-emerald-400" /><span className="font-medium text-emerald-400">Operacionais</span></div>
+                <p className="text-3xl font-bold text-emerald-300">{poleStats.funcionando}</p>
+                <p className="text-sm text-emerald-500/60">postes funcionando</p>
               </div>
-              <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-300/30">
-                <div className="flex items-center gap-2 mb-2"><AlertTriangle className="h-5 w-5 text-amber-600" /><span className="font-medium text-amber-700">Com Problemas</span></div>
-                <p className="text-3xl font-bold text-amber-700">{poleStats.com_falha}</p>
-                <p className="text-sm text-amber-600/70">necessitam reparo</p>
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center gap-2 mb-2"><AlertTriangle className="h-5 w-5 text-amber-400" /><span className="font-medium text-amber-400">Com Problemas</span></div>
+                <p className="text-3xl font-bold text-amber-300">{poleStats.com_falha}</p>
+                <p className="text-sm text-amber-500/60">necessitam reparo</p>
               </div>
-              <div className="p-4 rounded-xl bg-gradient-to-br from-sky-500/15 to-sky-500/5 border border-sky-300/30">
-                <div className="flex items-center gap-2 mb-2"><Wrench className="h-5 w-5 text-sky-600" /><span className="font-medium text-sky-700">Em Serviço</span></div>
-                <p className="text-3xl font-bold text-sky-700">{poleStats.em_manutencao}</p>
-                <p className="text-sm text-sky-600/70">em manutenção</p>
+              <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/20">
+                <div className="flex items-center gap-2 mb-2"><Wrench className="h-5 w-5 text-sky-400" /><span className="font-medium text-sky-400">Em Serviço</span></div>
+                <p className="text-3xl font-bold text-sky-300">{poleStats.em_manutencao}</p>
+                <p className="text-sm text-sky-500/60">em manutenção</p>
               </div>
             </div>
           </CardContent>
