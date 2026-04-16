@@ -4,346 +4,319 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Zap, Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
+import { Zap, Mail, Lock, User, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { z } from 'zod';
+import condoBg from '@/assets/condominio-bg.jpg';
 
-const loginSchema = z.object({
+const esquemaLogin = z.object({
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
 });
 
-const signupSchema = z.object({
-  fullName: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
+const esquemaCadastro = z.object({
+  nomeCompleto: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
+  senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  confirmarSenha: z.string(),
+}).refine(dados => dados.senha === dados.confirmarSenha, {
   message: 'As senhas não coincidem',
-  path: ['confirmPassword'],
+  path: ['confirmarSenha'],
 });
 
 export default function Auth() {
   const { user, loading, signIn, signUp, isSindico } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isActive, setIsActive] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
+  const [modoAtivo, setModoAtivo] = useState<'login' | 'cadastro'>('login');
 
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [signupData, setSignupData] = useState({ 
-    fullName: '', 
-    email: '', 
-    password: '', 
-    confirmPassword: '' 
+  const [dadosLogin, setDadosLogin] = useState({ email: '', senha: '' });
+  const [dadosCadastro, setDadosCadastro] = useState({
+    nomeCompleto: '',
+    email: '',
+    senha: '',
+    confirmarSenha: '',
   });
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (user) {
-    // Redirect based on role
     return <Navigate to={isSindico ? '/dashboard' : '/inicio'} replace />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    
+    setErro(null);
+
     try {
-      loginSchema.parse(loginData);
+      esquemaLogin.parse({ email: dadosLogin.email, senha: dadosLogin.senha });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        setError(err.errors[0].message);
+        setErro(err.errors[0].message);
         return;
       }
     }
 
-    setIsLoading(true);
-    const { error } = await signIn(loginData.email, loginData.password);
-    setIsLoading(false);
+    setCarregando(true);
+    const { error } = await signIn(dadosLogin.email, dadosLogin.senha);
+    setCarregando(false);
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        setError('Email ou senha incorretos');
+        setErro('Email ou senha incorretos');
       } else if (error.message.includes('Email not confirmed')) {
-        setError('Por favor, confirme seu email antes de entrar');
+        setErro('Por favor, confirme seu email antes de entrar');
       } else {
-        setError(error.message);
+        setErro(error.message);
       }
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setErro(null);
+    setSucesso(null);
 
     try {
-      signupSchema.parse(signupData);
+      esquemaCadastro.parse({
+        nomeCompleto: dadosCadastro.nomeCompleto,
+        email: dadosCadastro.email,
+        senha: dadosCadastro.senha,
+        confirmarSenha: dadosCadastro.confirmarSenha,
+      });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        setError(err.errors[0].message);
+        setErro(err.errors[0].message);
         return;
       }
     }
 
-    setIsLoading(true);
-    const { error } = await signUp(signupData.email, signupData.password, signupData.fullName);
-    setIsLoading(false);
+    setCarregando(true);
+    const { error } = await signUp(dadosCadastro.email, dadosCadastro.senha, dadosCadastro.nomeCompleto);
+    setCarregando(false);
 
     if (error) {
       if (error.message.includes('already registered')) {
-        setError('Este email já está cadastrado');
+        setErro('Este email já está cadastrado');
       } else {
-        setError(error.message);
+        setErro(error.message);
       }
     } else {
-      setSuccess('Cadastro realizado com sucesso! Você já pode fazer login.');
-      setSignupData({ fullName: '', email: '', password: '', confirmPassword: '' });
+      setSucesso('Cadastro realizado com sucesso! Você já pode fazer login.');
+      setDadosCadastro({ nomeCompleto: '', email: '', senha: '', confirmarSenha: '' });
     }
   };
 
-  const switchToRegister = () => {
-    setIsActive(true);
-    setError(null);
-    setSuccess(null);
-  };
-
-  const switchToLogin = () => {
-    setIsActive(false);
-    setError(null);
-    setSuccess(null);
+  const alternarModo = (modo: 'login' | 'cadastro') => {
+    setModoAtivo(modo);
+    setErro(null);
+    setSucesso(null);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/10 p-4">
-      <div 
-        className={`relative w-full max-w-[850px] min-h-[550px] bg-card rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 ${isActive ? 'active' : ''}`}
-        style={{ perspective: '1000px' }}
-      >
-        {/* Login Form */}
-        <div 
-          className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-all duration-500 z-10 
-            ${isActive ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'}`}
-        >
-          <form onSubmit={handleLogin} className="w-full max-w-xs space-y-5">
-            <h2 className="text-3xl font-bold text-foreground text-center mb-2">Login</h2>
-            
-            {error && !isActive && (
-              <Alert variant="destructive" className="py-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="email"
-                placeholder="Email"
-                className="pl-12 h-12 rounded-lg border-border bg-muted/50 focus:bg-background"
-                value={loginData.email}
-                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-              />
+    <div className="flex min-h-screen">
+      {/* Lado esquerdo - Imagem */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <img
+          src={condoBg}
+          alt="Condomínio residencial"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
+        <div className="relative z-10 flex flex-col justify-end p-10 pb-14">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-lg">
+              <Zap className="h-5 w-5 text-primary-foreground" />
             </div>
-            
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="Senha"
-                className="pl-12 h-12 rounded-lg border-border bg-muted/50 focus:bg-background"
-                value={loginData.password}
-                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-              />
-            </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full h-12 rounded-lg font-semibold text-base shadow-lg hover:shadow-xl transition-all"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Entrando...
-                </>
-              ) : (
-                'Entrar'
-              )}
-            </Button>
-          </form>
-        </div>
-
-        {/* Register Form - Consumidores */}
-        <div 
-          className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-all duration-500 z-10
-            ${isActive ? 'translate-x-full opacity-100' : 'translate-x-0 opacity-0 pointer-events-none'}`}
-        >
-          <form onSubmit={handleSignup} className="w-full max-w-xs space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center mb-1">Cadastro</h2>
-            <p className="text-center text-sm text-muted-foreground mb-2">Cadastro para moradores</p>
-            
-            {error && isActive && (
-              <Alert variant="destructive" className="py-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            {success && (
-              <Alert className="border-emerald-300 bg-emerald-50 py-2">
-                <AlertDescription className="text-emerald-700 text-sm">{success}</AlertDescription>
-              </Alert>
-            )}
-            
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Nome completo"
-                className="pl-12 h-11 rounded-lg border-border bg-muted/50 focus:bg-background"
-                value={signupData.fullName}
-                onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-              />
-            </div>
-            
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="email"
-                placeholder="Email"
-                className="pl-12 h-11 rounded-lg border-border bg-muted/50 focus:bg-background"
-                value={signupData.email}
-                onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-              />
-            </div>
-            
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="Senha"
-                className="pl-12 h-11 rounded-lg border-border bg-muted/50 focus:bg-background"
-                value={signupData.password}
-                onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-              />
-            </div>
-            
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="Confirmar senha"
-                className="pl-12 h-11 rounded-lg border-border bg-muted/50 focus:bg-background"
-                value={signupData.confirmPassword}
-                onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-              />
-            </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full h-11 rounded-lg font-semibold text-base shadow-lg hover:shadow-xl transition-all"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Cadastrando...
-                </>
-              ) : (
-                'Cadastrar'
-              )}
-            </Button>
-          </form>
-        </div>
-
-        {/* Toggle Panel */}
-        <div 
-          className={`absolute top-0 w-1/2 h-full overflow-hidden transition-all duration-500 z-20 rounded-3xl
-            ${isActive ? 'left-0 rounded-r-[150px]' : 'left-1/2 rounded-l-[150px]'}`}
-          style={{ background: 'linear-gradient(135deg, hsl(15 90% 50%) 0%, hsl(24 95% 53%) 35%, hsl(45 93% 47%) 100%)' }}
-        >
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-                <Zap className="h-8 w-8 text-white" />
-              </div>
-            </div>
-            
-            {!isActive ? (
-              <>
-                <h3 className="text-3xl font-bold text-white mb-3">
-                  Olá, Bem-vindo!
-                </h3>
-                <p className="text-white/80 mb-8 text-sm leading-relaxed">
-                  É morador do condomínio?<br />Cadastre-se para acessar o portal
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-orange-600 px-10 h-11 rounded-lg font-semibold transition-all"
-                  onClick={switchToRegister}
-                  type="button"
-                >
-                  Cadastrar
-                </Button>
-              </>
-            ) : (
-              <>
-                <h3 className="text-3xl font-bold text-white mb-3">
-                  Bem-vindo de volta!
-                </h3>
-                <p className="text-white/80 mb-8 text-sm leading-relaxed">
-                  Já possui uma conta?<br />Entre para acessar o sistema
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-orange-600 px-10 h-11 rounded-lg font-semibold transition-all"
-                  onClick={switchToLogin}
-                  type="button"
-                >
-                  Entrar
-                </Button>
-              </>
-            )}
-            
-            <p className="absolute bottom-6 text-xs text-white/60">
-              PosteGuard - Sistema de Monitoramento
-            </p>
+            <span className="text-xl font-bold text-white tracking-tight">PosteGuard</span>
           </div>
+          <h2 className="text-3xl font-bold text-white leading-tight mb-2">
+            Monitoramento inteligente<br />para seu condomínio
+          </h2>
+          <p className="text-white/70 text-sm max-w-md">
+            Gerencie postes, acompanhe manutenções e garanta a iluminação do seu condomínio em tempo real.
+          </p>
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .relative.w-full.max-w-\\[850px\\] {
-            max-width: 400px;
-            min-height: auto;
-          }
-          .relative.w-full.max-w-\\[850px\\] > div:first-child,
-          .relative.w-full.max-w-\\[850px\\] > div:nth-child(2) {
-            position: relative;
-            width: 100%;
-            padding: 2rem 1.5rem;
-            transform: none !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
-          }
-          .relative.w-full.max-w-\\[850px\\] > div:last-child {
-            position: relative;
-            width: 100%;
-            left: 0 !important;
-            border-radius: 1.5rem !important;
-            padding: 2rem;
-            min-height: 200px;
-          }
-        }
-      `}</style>
+      {/* Lado direito - Formulário */}
+      <div className="flex w-full lg:w-1/2 items-center justify-center bg-background p-6">
+        <div className="w-full max-w-sm space-y-6">
+          {/* Logo mobile */}
+          <div className="flex items-center gap-2.5 lg:hidden mb-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
+              <Zap className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="text-lg font-bold text-foreground">PosteGuard</span>
+          </div>
+
+          {/* Abas */}
+          <div>
+            <div className="flex rounded-lg bg-muted p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => alternarModo('login')}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                  modoAtivo === 'login'
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Entrar
+              </button>
+              <button
+                type="button"
+                onClick={() => alternarModo('cadastro')}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                  modoAtivo === 'cadastro'
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Cadastrar
+              </button>
+            </div>
+
+            {/* Alertas */}
+            {erro && (
+              <Alert variant="destructive" className="mb-4 py-2.5">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-sm">{erro}</AlertDescription>
+              </Alert>
+            )}
+
+            {sucesso && (
+              <Alert className="mb-4 border-emerald-300 bg-emerald-50 py-2.5">
+                <AlertDescription className="text-sm text-emerald-700">{sucesso}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Login */}
+            {modoAtivo === 'login' && (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      placeholder="seu@email.com"
+                      className="pl-10 h-10"
+                      value={dadosLogin.email}
+                      onChange={(e) => setDadosLogin({ ...dadosLogin, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Senha</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      className="pl-10 h-10"
+                      value={dadosLogin.senha}
+                      onChange={(e) => setDadosLogin({ ...dadosLogin, senha: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full h-10 font-medium" disabled={carregando}>
+                  {carregando ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                  )}
+                  {carregando ? 'Entrando...' : 'Entrar'}
+                </Button>
+              </form>
+            )}
+
+            {/* Cadastro */}
+            {modoAtivo === 'cadastro' && (
+              <form onSubmit={handleCadastro} className="space-y-3.5">
+                <p className="text-xs text-muted-foreground -mt-2 mb-1">Cadastro para moradores do condomínio</p>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Nome completo</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Seu nome"
+                      className="pl-10 h-10"
+                      value={dadosCadastro.nomeCompleto}
+                      onChange={(e) => setDadosCadastro({ ...dadosCadastro, nomeCompleto: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      placeholder="seu@email.com"
+                      className="pl-10 h-10"
+                      value={dadosCadastro.email}
+                      onChange={(e) => setDadosCadastro({ ...dadosCadastro, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Senha</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      className="pl-10 h-10"
+                      value={dadosCadastro.senha}
+                      onChange={(e) => setDadosCadastro({ ...dadosCadastro, senha: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Confirmar senha</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      className="pl-10 h-10"
+                      value={dadosCadastro.confirmarSenha}
+                      onChange={(e) => setDadosCadastro({ ...dadosCadastro, confirmarSenha: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full h-10 font-medium" disabled={carregando}>
+                  {carregando ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                  )}
+                  {carregando ? 'Cadastrando...' : 'Cadastrar'}
+                </Button>
+              </form>
+            )}
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground">
+            PosteGuard — Sistema de Monitoramento
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
