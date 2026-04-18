@@ -55,11 +55,29 @@ export default function Postes() {
   const [posteEditando, setPosteEditando] = useState<Poste | null>(null);
   const [salvando, setSalvando] = useState(false);
 
+  // lamp_lifespan_years: vida útil da lâmpada em anos (convertida internamente para horas)
   const [dadosFormulario, setDadosFormulario] = useState({
     code: '', location_description: '', lighting_type: '' as any,
-    power_watts: '', installation_date: '', lamp_lifespan_hours: '50000',
+    power_watts: '', installation_date: '', lamp_lifespan_years: '3',
     maintenance_company: '', latitude: '', longitude: '',
   });
+
+  // Constante de conversão: assume 12h/dia de funcionamento
+  const HORAS_POR_ANO = 12 * 365;
+  const horasParaAnos = (horas: number | null) => Math.round(((horas || 0) / HORAS_POR_ANO) * 10) / 10;
+  const anosParaHoras = (anos: number) => Math.round(anos * HORAS_POR_ANO);
+
+  // Gerar próximo código no formato END-001
+  const gerarProximoCodigo = (lista: Poste[]) => {
+    const numeros = lista
+      .map(p => {
+        const m = p.code.match(/^END-(\d+)$/i);
+        return m ? parseInt(m[1], 10) : 0;
+      })
+      .filter(n => n > 0);
+    const proximo = (numeros.length ? Math.max(...numeros) : 0) + 1;
+    return `END-${String(proximo).padStart(3, '0')}`;
+  };
 
   useEffect(() => { buscarPostes(); }, []);
 
@@ -74,28 +92,40 @@ export default function Postes() {
     } finally { setCarregando(false); }
   };
 
+  // Abrir diálogo de criação (gera código automático)
+  const abrirDialogoNovo = () => {
+    setDadosFormulario({
+      code: gerarProximoCodigo(postes),
+      location_description: '', lighting_type: '' as any, power_watts: '',
+      installation_date: '', lamp_lifespan_years: '3',
+      maintenance_company: '', latitude: '', longitude: '',
+    });
+    setDialogAberto(true);
+  };
+
   // Criar novo poste
   const criarPoste = async () => {
-    if (!dadosFormulario.code || !dadosFormulario.location_description || !dadosFormulario.lighting_type || !dadosFormulario.power_watts) {
+    if (!dadosFormulario.location_description || !dadosFormulario.lighting_type || !dadosFormulario.power_watts) {
       toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
     setSalvando(true);
     try {
+      // Garantir código único e sequencial no momento do salvamento
+      const codigoFinal = gerarProximoCodigo(postes);
       const novoPoste: PosteInsercao = {
-        code: dadosFormulario.code, location_description: dadosFormulario.location_description,
+        code: codigoFinal, location_description: dadosFormulario.location_description,
         lighting_type: dadosFormulario.lighting_type, power_watts: parseInt(dadosFormulario.power_watts),
         installation_date: dadosFormulario.installation_date || null,
-        lamp_lifespan_hours: parseInt(dadosFormulario.lamp_lifespan_hours) || 50000,
+        lamp_lifespan_hours: anosParaHoras(parseFloat(dadosFormulario.lamp_lifespan_years) || 3),
         maintenance_company: dadosFormulario.maintenance_company || null,
         latitude: dadosFormulario.latitude ? parseFloat(dadosFormulario.latitude) : null,
         longitude: dadosFormulario.longitude ? parseFloat(dadosFormulario.longitude) : null,
       };
       const { error } = await supabase.from('poles').insert(novoPoste);
       if (error) throw error;
-      toast({ title: 'Poste cadastrado com sucesso' });
+      toast({ title: 'Poste cadastrado com sucesso', description: `Código: ${codigoFinal}` });
       setDialogAberto(false);
-      setDadosFormulario({ code: '', location_description: '', lighting_type: '', power_watts: '', installation_date: '', lamp_lifespan_hours: '50000', maintenance_company: '', latitude: '', longitude: '' });
       buscarPostes();
     } catch (erro: any) {
       toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
@@ -108,8 +138,9 @@ export default function Postes() {
     setSalvando(true);
     try {
       const { error } = await supabase.from('poles').update({
-        code: dadosFormulario.code, location_description: dadosFormulario.location_description,
+        location_description: dadosFormulario.location_description,
         lighting_type: dadosFormulario.lighting_type, power_watts: parseInt(dadosFormulario.power_watts),
+        lamp_lifespan_hours: anosParaHoras(parseFloat(dadosFormulario.lamp_lifespan_years) || 3),
         maintenance_company: dadosFormulario.maintenance_company || null,
         latitude: dadosFormulario.latitude ? parseFloat(dadosFormulario.latitude) : null,
         longitude: dadosFormulario.longitude ? parseFloat(dadosFormulario.longitude) : null,
@@ -154,7 +185,8 @@ export default function Postes() {
     setDadosFormulario({
       code: poste.code, location_description: poste.location_description,
       lighting_type: poste.lighting_type, power_watts: poste.power_watts.toString(),
-      installation_date: poste.installation_date || '', lamp_lifespan_hours: (poste.lamp_lifespan_hours || 50000).toString(),
+      installation_date: poste.installation_date || '',
+      lamp_lifespan_years: horasParaAnos(poste.lamp_lifespan_hours).toString(),
       maintenance_company: poste.maintenance_company || '',
       latitude: poste.latitude?.toString() || '', longitude: poste.longitude?.toString() || '',
     });

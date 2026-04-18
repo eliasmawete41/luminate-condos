@@ -22,7 +22,6 @@ const adminMenuItems = [
 ];
 
 const adminManagementItems = [
-  { title: 'Unidades', url: '/unidades', icon: Building2 },
   { title: 'Usuários', url: '/usuarios', icon: Users },
   { title: 'Dispositivos', url: '/dispositivos', icon: Cpu },
 ];
