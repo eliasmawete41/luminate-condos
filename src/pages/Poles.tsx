@@ -232,12 +232,34 @@ export default function Postes() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
+          <Label>Código do Poste</Label>
+          <Input value={dadosFormulario.code} readOnly disabled className="font-mono" />
+          <p className="text-xs text-muted-foreground">Gerado automaticamente</p>
+        </div>
+        <div className="space-y-2">
+          <Label>Tipo de Iluminação *</Label>
+          <Select value={dadosFormulario.lighting_type} onValueChange={(v) => setDadosFormulario({ ...dadosFormulario, lighting_type: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>{Object.entries(tiposIluminacao).map(([v, l]) => (<SelectItem key={v} value={v}>{l}</SelectItem>))}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Localização *</Label>
+        <Input placeholder="Ex: Entrada Principal, Bloco A" value={dadosFormulario.location_description} onChange={(e) => setDadosFormulario({ ...dadosFormulario, location_description: e.target.value })} />
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
           <Label>Potência (W) *</Label>
           <Input type="number" placeholder="Ex: 100" value={dadosFormulario.power_watts} onChange={(e) => setDadosFormulario({ ...dadosFormulario, power_watts: e.target.value })} />
         </div>
         <div className="space-y-2">
+          <Label>Vida Útil (anos) *</Label>
+          <Input type="number" step="0.5" min="0.5" placeholder="3" value={dadosFormulario.lamp_lifespan_years} onChange={(e) => setDadosFormulario({ ...dadosFormulario, lamp_lifespan_years: e.target.value })} />
+        </div>
+        <div className="space-y-2">
           <Label>Empresa de Manutenção</Label>
-          <Input placeholder="Nome da empresa" value={dadosFormulario.maintenance_company} onChange={(e) => setDadosFormulario({ ...dadosFormulario, maintenance_company: e.target.value })} />
+          <Input placeholder="Nome" value={dadosFormulario.maintenance_company} onChange={(e) => setDadosFormulario({ ...dadosFormulario, maintenance_company: e.target.value })} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
