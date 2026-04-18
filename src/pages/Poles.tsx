@@ -290,7 +290,7 @@ export default function Postes() {
           {isManutencao && (
             <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
               <DialogTrigger asChild>
-                <Button variant="secondary" className="gap-2 shadow-md"><Plus className="h-4 w-4" />Novo Poste</Button>
+                <Button variant="secondary" className="gap-2 shadow-md" onClick={abrirDialogoNovo}><Plus className="h-4 w-4" />Novo Poste</Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
