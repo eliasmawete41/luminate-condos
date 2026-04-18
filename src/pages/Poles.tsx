@@ -373,7 +373,7 @@ export default function Postes() {
                         <TableCell>
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">Restante</span>
+                              <span className="text-muted-foreground">{horasParaAnos(poste.lamp_lifespan_hours)} anos</span>
                               <span className={cn("font-medium", saude > 50 ? "text-emerald-600" : saude > 20 ? "text-amber-600" : "text-red-600")}>{saude}%</span>
                             </div>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -414,7 +414,7 @@ export default function Postes() {
               <Lamp className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <p className="text-muted-foreground">Nenhum poste encontrado</p>
               {isManutencao && (
-                <Button className="mt-4" onClick={() => setDialogAberto(true)}><Plus className="h-4 w-4 mr-2" />Cadastrar primeiro poste</Button>
+                <Button className="mt-4" onClick={abrirDialogoNovo}><Plus className="h-4 w-4 mr-2" />Cadastrar primeiro poste</Button>
               )}
             </div>
           )}
