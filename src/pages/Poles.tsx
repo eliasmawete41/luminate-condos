@@ -55,11 +55,29 @@ export default function Postes() {
   const [posteEditando, setPosteEditando] = useState<Poste | null>(null);
   const [salvando, setSalvando] = useState(false);
 
+  // lamp_lifespan_years: vida útil da lâmpada em anos (convertida internamente para horas)
   const [dadosFormulario, setDadosFormulario] = useState({
     code: '', location_description: '', lighting_type: '' as any,
-    power_watts: '', installation_date: '', lamp_lifespan_hours: '50000',
+    power_watts: '', installation_date: '', lamp_lifespan_years: '3',
     maintenance_company: '', latitude: '', longitude: '',
   });
+
+  // Constante de conversão: assume 12h/dia de funcionamento
+  const HORAS_POR_ANO = 12 * 365;
+  const horasParaAnos = (horas: number | null) => Math.round(((horas || 0) / HORAS_POR_ANO) * 10) / 10;
+  const anosParaHoras = (anos: number) => Math.round(anos * HORAS_POR_ANO);
+
+  // Gerar próximo código no formato END-001
+  const gerarProximoCodigo = (lista: Poste[]) => {
+    const numeros = lista
+      .map(p => {
+        const m = p.code.match(/^END-(\d+)$/i);
+        return m ? parseInt(m[1], 10) : 0;
+      })
+      .filter(n => n > 0);
+    const proximo = (numeros.length ? Math.max(...numeros) : 0) + 1;
+    return `END-${String(proximo).padStart(3, '0')}`;
+  };
 
   useEffect(() => { buscarPostes(); }, []);
 
@@ -74,28 +92,40 @@ export default function Postes() {
     } finally { setCarregando(false); }
   };
 
+  // Abrir diálogo de criação (gera código automático)
+  const abrirDialogoNovo = () => {
+    setDadosFormulario({
+      code: gerarProximoCodigo(postes),
+      location_description: '', lighting_type: '' as any, power_watts: '',
+      installation_date: '', lamp_lifespan_years: '3',
+      maintenance_company: '', latitude: '', longitude: '',
+    });
+    setDialogAberto(true);
+  };
+
   // Criar novo poste
   const criarPoste = async () => {
-    if (!dadosFormulario.code || !dadosFormulario.location_description || !dadosFormulario.lighting_type || !dadosFormulario.power_watts) {
+    if (!dadosFormulario.location_description || !dadosFormulario.lighting_type || !dadosFormulario.power_watts) {
       toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
     setSalvando(true);
     try {
+      // Garantir código único e sequencial no momento do salvamento
+      const codigoFinal = gerarProximoCodigo(postes);
       const novoPoste: PosteInsercao = {
-        code: dadosFormulario.code, location_description: dadosFormulario.location_description,
+        code: codigoFinal, location_description: dadosFormulario.location_description,
         lighting_type: dadosFormulario.lighting_type, power_watts: parseInt(dadosFormulario.power_watts),
         installation_date: dadosFormulario.installation_date || null,
-        lamp_lifespan_hours: parseInt(dadosFormulario.lamp_lifespan_hours) || 50000,
+        lamp_lifespan_hours: anosParaHoras(parseFloat(dadosFormulario.lamp_lifespan_years) || 3),
         maintenance_company: dadosFormulario.maintenance_company || null,
         latitude: dadosFormulario.latitude ? parseFloat(dadosFormulario.latitude) : null,
         longitude: dadosFormulario.longitude ? parseFloat(dadosFormulario.longitude) : null,
       };
       const { error } = await supabase.from('poles').insert(novoPoste);
       if (error) throw error;
-      toast({ title: 'Poste cadastrado com sucesso' });
+      toast({ title: 'Poste cadastrado com sucesso', description: `Código: ${codigoFinal}` });
       setDialogAberto(false);
-      setDadosFormulario({ code: '', location_description: '', lighting_type: '', power_watts: '', installation_date: '', lamp_lifespan_hours: '50000', maintenance_company: '', latitude: '', longitude: '' });
       buscarPostes();
     } catch (erro: any) {
       toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
@@ -108,8 +138,9 @@ export default function Postes() {
     setSalvando(true);
     try {
       const { error } = await supabase.from('poles').update({
-        code: dadosFormulario.code, location_description: dadosFormulario.location_description,
+        location_description: dadosFormulario.location_description,
         lighting_type: dadosFormulario.lighting_type, power_watts: parseInt(dadosFormulario.power_watts),
+        lamp_lifespan_hours: anosParaHoras(parseFloat(dadosFormulario.lamp_lifespan_years) || 3),
         maintenance_company: dadosFormulario.maintenance_company || null,
         latitude: dadosFormulario.latitude ? parseFloat(dadosFormulario.latitude) : null,
         longitude: dadosFormulario.longitude ? parseFloat(dadosFormulario.longitude) : null,
@@ -154,7 +185,8 @@ export default function Postes() {
     setDadosFormulario({
       code: poste.code, location_description: poste.location_description,
       lighting_type: poste.lighting_type, power_watts: poste.power_watts.toString(),
-      installation_date: poste.installation_date || '', lamp_lifespan_hours: (poste.lamp_lifespan_hours || 50000).toString(),
+      installation_date: poste.installation_date || '',
+      lamp_lifespan_years: horasParaAnos(poste.lamp_lifespan_hours).toString(),
       maintenance_company: poste.maintenance_company || '',
       latitude: poste.latitude?.toString() || '', longitude: poste.longitude?.toString() || '',
     });
@@ -200,12 +232,34 @@ export default function Postes() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
+          <Label>Código do Poste</Label>
+          <Input value={dadosFormulario.code} readOnly disabled className="font-mono" />
+          <p className="text-xs text-muted-foreground">Gerado automaticamente</p>
+        </div>
+        <div className="space-y-2">
+          <Label>Tipo de Iluminação *</Label>
+          <Select value={dadosFormulario.lighting_type} onValueChange={(v) => setDadosFormulario({ ...dadosFormulario, lighting_type: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>{Object.entries(tiposIluminacao).map(([v, l]) => (<SelectItem key={v} value={v}>{l}</SelectItem>))}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Localização *</Label>
+        <Input placeholder="Ex: Entrada Principal, Bloco A" value={dadosFormulario.location_description} onChange={(e) => setDadosFormulario({ ...dadosFormulario, location_description: e.target.value })} />
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
           <Label>Potência (W) *</Label>
           <Input type="number" placeholder="Ex: 100" value={dadosFormulario.power_watts} onChange={(e) => setDadosFormulario({ ...dadosFormulario, power_watts: e.target.value })} />
         </div>
         <div className="space-y-2">
+          <Label>Vida Útil (anos) *</Label>
+          <Input type="number" step="0.5" min="0.5" placeholder="3" value={dadosFormulario.lamp_lifespan_years} onChange={(e) => setDadosFormulario({ ...dadosFormulario, lamp_lifespan_years: e.target.value })} />
+        </div>
+        <div className="space-y-2">
           <Label>Empresa de Manutenção</Label>
-          <Input placeholder="Nome da empresa" value={dadosFormulario.maintenance_company} onChange={(e) => setDadosFormulario({ ...dadosFormulario, maintenance_company: e.target.value })} />
+          <Input placeholder="Nome" value={dadosFormulario.maintenance_company} onChange={(e) => setDadosFormulario({ ...dadosFormulario, maintenance_company: e.target.value })} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -236,7 +290,7 @@ export default function Postes() {
           {isManutencao && (
             <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
               <DialogTrigger asChild>
-                <Button variant="secondary" className="gap-2 shadow-md"><Plus className="h-4 w-4" />Novo Poste</Button>
+                <Button variant="secondary" className="gap-2 shadow-md" onClick={abrirDialogoNovo}><Plus className="h-4 w-4" />Novo Poste</Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
@@ -319,7 +373,7 @@ export default function Postes() {
                         <TableCell>
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">Restante</span>
+                              <span className="text-muted-foreground">{horasParaAnos(poste.lamp_lifespan_hours)} anos</span>
                               <span className={cn("font-medium", saude > 50 ? "text-emerald-600" : saude > 20 ? "text-amber-600" : "text-red-600")}>{saude}%</span>
                             </div>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -360,7 +414,7 @@ export default function Postes() {
               <Lamp className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <p className="text-muted-foreground">Nenhum poste encontrado</p>
               {isManutencao && (
-                <Button className="mt-4" onClick={() => setDialogAberto(true)}><Plus className="h-4 w-4 mr-2" />Cadastrar primeiro poste</Button>
+                <Button className="mt-4" onClick={abrirDialogoNovo}><Plus className="h-4 w-4 mr-2" />Cadastrar primeiro poste</Button>
               )}
             </div>
           )}
