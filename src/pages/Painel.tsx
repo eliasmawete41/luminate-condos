@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/cartao';
+import { Badge } from '@/components/ui/etiqueta';
+import { Button } from '@/components/ui/botao';
 import { 
   Lamp, AlertTriangle, Wrench, CheckCircle2, Activity,
   Clock, Zap, ArrowRight, Plus, Loader2

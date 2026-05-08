@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/botao';
+import { Input } from '@/components/ui/entrada';
+import { Alert, AlertDescription } from '@/components/ui/alerta';
 import { Zap, Mail, Lock, User, AlertCircle, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 import condoBg from '@/assets/condominio-bg.png';

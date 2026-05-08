@@ -10,9 +10,9 @@ import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
   SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
-} from '@/components/ui/sidebar';
+} from '@/components/ui/barra-lateral';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/botao';
 
 const adminMenuItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
