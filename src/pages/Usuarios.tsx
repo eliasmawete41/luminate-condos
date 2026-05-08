@@ -39,8 +39,6 @@ interface UsuarioComPapel {
 // Configuração dos papéis
 const configPapeis: Record<string, { rotulo: string; cor: string; icone: React.ElementType }> = {
   admin: { rotulo: 'Administrador', cor: 'bg-purple-500/10 text-purple-600 border-purple-200', icone: Shield },
-  sindico: { rotulo: 'Síndico', cor: 'bg-blue-500/10 text-blue-600 border-blue-200', icone: Shield },
-  subsindico: { rotulo: 'Subsíndico', cor: 'bg-cyan-500/10 text-cyan-600 border-cyan-200', icone: Shield },
   morador: { rotulo: 'Morador', cor: 'bg-green-500/10 text-green-600 border-green-200', icone: UserCheck },
   manutencao: { rotulo: 'Técnico', cor: 'bg-amber-500/10 text-amber-600 border-amber-200', icone: Wrench },
 };
