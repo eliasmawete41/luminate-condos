@@ -42,7 +42,7 @@ serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", callingUser.id)
-      .in("role", ["admin", "sindico"]);
+      .in("role", ["admin"]);
 
     if (!roleData || roleData.length === 0) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {

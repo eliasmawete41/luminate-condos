@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         const { data: monitores } = await supabase
           .from('user_roles')
           .select('user_id')
-          .in('role', ['admin', 'sindico', 'subsindico', 'manutencao'])
+          .in('role', ['admin', 'manutencao'])
 
         if (monitores && manutencao) {
           const notificacoes = monitores.map(m => ({

@@ -24,7 +24,7 @@ const esquemaCadastro = z.object({
 });
 
 export default function Auth() {
-  const { user, loading, signIn, signUp, isSindico } = useAuth();
+  const { user, loading, signIn, signUp, isAdmin } = useAuth();
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export default function Auth() {
   }
 
   if (user) {
-    return <Navigate to={isSindico ? '/dashboard' : '/inicio'} replace />;
+    return <Navigate to={isAdmin ? '/dashboard' : '/inicio'} replace />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {

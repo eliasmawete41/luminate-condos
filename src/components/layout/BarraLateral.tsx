@@ -46,11 +46,11 @@ const technicianMenuItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
-  const { profile, signOut, isSindico, roles } = useAuth();
+  const { profile, signOut, isAdmin, roles } = useAuth();
   const collapsed = state === 'collapsed';
 
-  const isTechnician = roles.includes('manutencao') && !isSindico;
-  const isConsumer = !isSindico && !isTechnician && (roles.includes('morador') || roles.length === 0);
+  const isTechnician = roles.includes('manutencao') && !isAdmin;
+  const isConsumer = !isAdmin && !isTechnician && (roles.includes('morador') || roles.length === 0);
 
   const isActive = (path: string) => location.pathname === path;
 

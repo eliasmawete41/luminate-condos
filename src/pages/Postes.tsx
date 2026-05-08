@@ -45,7 +45,7 @@ const tiposIluminacao: Record<string, string> = {
 
 export default function Postes() {
   const { toast } = useToast();
-  const { isManutencao, isSindico } = useAuth();
+  const { isManutencao, isAdmin } = useAuth();
   const [postes, setPostes] = useState<Poste[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [termoBusca, setTermoBusca] = useState('');
@@ -392,7 +392,7 @@ export default function Postes() {
                                   <v.icone className="h-3.5 w-3.5 mr-2" />{v.rotulo}
                                 </DropdownMenuItem>
                               ))}
-                              {isSindico && (
+                              {isAdmin && (
                                 <>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem className="text-destructive" onClick={() => excluirPoste(poste.id)}>

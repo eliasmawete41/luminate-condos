@@ -38,7 +38,7 @@ const configStatus: Record<string, { rotulo: string; cor: string }> = {
 
 export default function Unidades() {
   const { toast } = useToast();
-  const { isSindico } = useAuth();
+  const { isAdmin } = useAuth();
   const [blocos, setBlocos] = useState<Bloco[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -295,7 +295,7 @@ export default function Unidades() {
                     <SelectContent><SelectItem value="all">Todos</SelectItem>{Object.entries(configStatus).map(([v, c]) => (<SelectItem key={v} value={v}>{c.rotulo}</SelectItem>))}</SelectContent>
                   </Select>
                 </div>
-                {isSindico && (
+                {isAdmin && (
                   <Dialog open={dialogUnidadeAberto} onOpenChange={setDialogUnidadeAberto}>
                     <DialogTrigger asChild><Button className="gap-2"><Plus className="h-4 w-4" />Nova Unidade</Button></DialogTrigger>
                     <DialogContent>
@@ -348,7 +348,7 @@ export default function Unidades() {
                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem onClick={() => abrirEdicaoUnidade(unidade)}><Pencil className="h-3.5 w-3.5 mr-2" />Editar</DropdownMenuItem>
-                                  {isSindico && (
+                                  {isAdmin && (
                                     <>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem className="text-destructive" onClick={() => excluirUnidade(unidade.id)}>
@@ -374,7 +374,7 @@ export default function Unidades() {
 
         {/* Aba de Blocos */}
         <TabsContent value="blocks" className="space-y-6">
-          {isSindico && (
+          {isAdmin && (
             <div className="flex justify-end">
               <Dialog open={dialogBlocoAberto} onOpenChange={setDialogBlocoAberto}>
                 <DialogTrigger asChild><Button className="gap-2"><Plus className="h-4 w-4" />Novo Bloco</Button></DialogTrigger>
@@ -414,7 +414,7 @@ export default function Unidades() {
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => abrirEdicaoBloco(bloco)}><Pencil className="h-3.5 w-3.5 mr-2" />Editar</DropdownMenuItem>
-                            {isSindico && (
+                            {isAdmin && (
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive" onClick={() => excluirBloco(bloco.id)}>
