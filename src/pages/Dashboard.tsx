@@ -82,7 +82,7 @@ export default function Dashboard() {
         .from('maintenances').select('id, description, failure_type, status, priority, created_at, poles(code)')
         .order('created_at', { ascending: false }).limit(5);
       if (maintenances) setRecentMaintenances(maintenances as Maintenance[]);
-    } catch (error) { console.error('Error:', error); }
+    } catch (erro) { console.error('Erro:', erro); }
     finally { setLoading(false); }
   };
 
