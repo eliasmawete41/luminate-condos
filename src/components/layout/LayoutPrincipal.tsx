@@ -6,7 +6,7 @@ import { Bell, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/botao';
 
 export function AppLayout() {
-  const { user, loading, isSindico, roles } = useAuth();
+  const { user, loading, isAdmin, roles } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -22,8 +22,8 @@ export function AppLayout() {
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  const ehTecnico = roles.includes('manutencao') && !isSindico;
-  const ehConsumidor = !isSindico && !ehTecnico && (roles.includes('morador') || roles.length === 0);
+  const ehTecnico = roles.includes('manutencao') && !isAdmin;
+  const ehConsumidor = !isAdmin && !ehTecnico && (roles.includes('morador') || roles.length === 0);
 
   const rotasSomenteAdmin = ['/dashboard', '/postes', '/manutencoes', '/unidades', '/usuarios', '/dispositivos', '/notificacoes', '/configuracoes', '/mapa'];
   const rotasSomenteConsumidor = ['/inicio', '/avaliacoes'];

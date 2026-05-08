@@ -48,7 +48,7 @@ const RESPOSTAS_AUTOMATICAS = [
 ];
 
 export default function Suporte() {
-  const { user: usuario, isSindico } = useAuth();
+  const { user: usuario, isAdmin } = useAuth();
   const { toast } = useToast();
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [conversaSelecionada, setConversaSelecionada] = useState<Conversa | null>(null);
@@ -168,7 +168,7 @@ export default function Suporte() {
       setNovaMensagem('');
 
       // Se for consumidor, enviar resposta automática após 2 segundos
-      if (!isSindico) {
+      if (!isAdmin) {
         setTimeout(async () => {
           const respostaAleatoria = RESPOSTAS_AUTOMATICAS[Math.floor(Math.random() * RESPOSTAS_AUTOMATICAS.length)];
           await supabase.from('support_messages').insert({
