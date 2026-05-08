@@ -16,7 +16,7 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify the requesting user is admin
+    // Verificar se o usuário que faz a requisição é admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -36,7 +36,7 @@ serve(async (req) => {
       });
     }
 
-    // Check if calling user is admin
+    // Conferir se o usuário chamador é admin
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
@@ -60,7 +60,7 @@ serve(async (req) => {
       });
     }
 
-    // Create user with admin API
+    // Criar usuário usando a API administrativa
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -75,8 +75,8 @@ serve(async (req) => {
       });
     }
 
-    // The handle_new_user trigger creates profile + default morador role
-    // If the role is not morador, update it
+    // O trigger handle_new_user cria o perfil e o papel padrão "morador"
+    // Se o papel solicitado não for "morador", atualizar
     if (role !== "morador") {
       await adminClient
         .from("user_roles")
@@ -84,7 +84,7 @@ serve(async (req) => {
         .eq("user_id", newUser.user!.id);
     }
 
-    // Update phone if provided
+    // Atualizar telefone se fornecido
     if (phone) {
       await adminClient
         .from("profiles")
