@@ -35,7 +35,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route element={<AppLayout />}>
-              {/* Admin routes */}
+              {/* Rotas de administrador */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/postes" element={<Poles />} />
               <Route path="/manutencoes" element={<Maintenances />} />
@@ -46,10 +46,10 @@ const App = () => (
               <Route path="/dispositivos" element={<Devices />} />
               <Route path="/mapa" element={<MapPage />} />
               
-              {/* Technician routes */}
+              {/* Rotas do técnico de manutenção */}
               <Route path="/tecnico" element={<TechnicianDashboard />} />
               
-              {/* Consumer routes */}
+              {/* Rotas do morador (consumidor) */}
               <Route path="/inicio" element={<ConsumerDashboard />} />
               <Route path="/suporte" element={<Support />} />
               <Route path="/avaliacoes" element={<Evaluations />} />
