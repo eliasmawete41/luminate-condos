@@ -13,7 +13,7 @@ import {
   Save,
   Camera
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/ContextoAutenticacao';
 
 export default function Configuracoes() {
   const { profile: perfil } = useAuth();

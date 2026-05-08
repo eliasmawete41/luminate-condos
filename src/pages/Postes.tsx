@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/ContextoAutenticacao';
 import type { Database } from '@/integrations/supabase/types';
 
 type Poste = Database['public']['Tables']['poles']['Row'];
