@@ -82,7 +82,7 @@ export default function Dashboard() {
         .from('maintenances').select('id, description, failure_type, status, priority, created_at, poles(code)')
         .order('created_at', { ascending: false }).limit(5);
       if (maintenances) setRecentMaintenances(maintenances as Maintenance[]);
-    } catch (error) { console.error('Error:', error); }
+    } catch (erro) { console.error('Erro:', erro); }
     finally { setLoading(false); }
   };
 
@@ -107,7 +107,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="rounded-2xl gradient-sunset p-6 text-white shadow-xl">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
@@ -123,7 +123,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Estatísticas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat) => (
           <Card key={stat.title} className={cn("border-l-4 glass-card hover:shadow-lg transition-all", stat.borderColor)}>
@@ -138,7 +138,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Charts Row */}
+      {/* Linha de gráficos */}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -201,7 +201,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Recent Maintenances */}
+      {/* Manutenções recentes */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

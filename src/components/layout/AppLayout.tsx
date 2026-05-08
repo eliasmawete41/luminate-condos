@@ -22,22 +22,22 @@ export function AppLayout() {
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  const isTechnician = roles.includes('manutencao') && !isSindico;
-  const isConsumer = !isSindico && !isTechnician && (roles.includes('morador') || roles.length === 0);
+  const ehTecnico = roles.includes('manutencao') && !isSindico;
+  const ehConsumidor = !isSindico && !ehTecnico && (roles.includes('morador') || roles.length === 0);
 
-  const adminOnlyPaths = ['/dashboard', '/postes', '/manutencoes', '/unidades', '/usuarios', '/dispositivos', '/notificacoes', '/configuracoes', '/mapa'];
-  const consumerOnlyPaths = ['/inicio', '/avaliacoes'];
-  const technicianPaths = ['/tecnico'];
+  const rotasSomenteAdmin = ['/dashboard', '/postes', '/manutencoes', '/unidades', '/usuarios', '/dispositivos', '/notificacoes', '/configuracoes', '/mapa'];
+  const rotasSomenteConsumidor = ['/inicio', '/avaliacoes'];
+  const rotasTecnico = ['/tecnico'];
 
-  if (isConsumer && adminOnlyPaths.includes(location.pathname)) return <Navigate to="/inicio" replace />;
-  if (isConsumer && technicianPaths.includes(location.pathname)) return <Navigate to="/inicio" replace />;
-  if (isTechnician && adminOnlyPaths.includes(location.pathname)) return <Navigate to="/tecnico" replace />;
-  if (isTechnician && consumerOnlyPaths.includes(location.pathname)) return <Navigate to="/tecnico" replace />;
-  if (!isConsumer && !isTechnician && consumerOnlyPaths.includes(location.pathname)) return <Navigate to="/dashboard" replace />;
+  if (ehConsumidor && rotasSomenteAdmin.includes(location.pathname)) return <Navigate to="/inicio" replace />;
+  if (ehConsumidor && rotasTecnico.includes(location.pathname)) return <Navigate to="/inicio" replace />;
+  if (ehTecnico && rotasSomenteAdmin.includes(location.pathname)) return <Navigate to="/tecnico" replace />;
+  if (ehTecnico && rotasSomenteConsumidor.includes(location.pathname)) return <Navigate to="/tecnico" replace />;
+  if (!ehConsumidor && !ehTecnico && rotasSomenteConsumidor.includes(location.pathname)) return <Navigate to="/dashboard" replace />;
 
   if (location.pathname === '/') {
-    if (isConsumer) return <Navigate to="/inicio" replace />;
-    if (isTechnician) return <Navigate to="/tecnico" replace />;
+    if (ehConsumidor) return <Navigate to="/inicio" replace />;
+    if (ehTecnico) return <Navigate to="/tecnico" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -53,7 +53,7 @@ export function AppLayout() {
                 <Menu className="h-5 w-5" />
               </SidebarTrigger>
             </div>
-            {!isConsumer && (
+            {!ehConsumidor && (
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground hover:bg-accent">
                   <Bell className="h-5 w-5" />

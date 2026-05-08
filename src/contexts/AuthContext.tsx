@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRoles(rolesResult.data.map(r => r.role as AppRole));
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Erro ao buscar dados do usuário:', error);
     } finally {
       setLoading(false);
     }
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
 }
