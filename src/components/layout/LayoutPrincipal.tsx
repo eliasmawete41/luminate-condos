@@ -2,12 +2,14 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/barra-lateral';
 import { AppSidebar } from './BarraLateral';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { Bell, Menu } from 'lucide-react';
+import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/botao';
+import { useTema } from '@/contexts/ContextoTema';
 
 export function AppLayout() {
   const { user, loading, isAdmin, roles } = useAuth();
   const location = useLocation();
+  const { tema, alternarTema } = useTema();
 
   if (loading) {
     return (
@@ -53,13 +55,22 @@ export function AppLayout() {
                 <Menu className="h-5 w-5" />
               </SidebarTrigger>
             </div>
-            {!ehConsumidor && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={alternarTema}
+                aria-label="Alternar tema"
+                className="text-muted-foreground hover:text-foreground hover:bg-accent"
+              >
+                {tema === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+              {!ehConsumidor && (
                 <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground hover:bg-accent">
                   <Bell className="h-5 w-5" />
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </header>
           {/* Área de conteúdo principal */}
           <main className="flex-1 overflow-auto p-4 md:p-6">

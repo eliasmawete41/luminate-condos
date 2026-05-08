@@ -4,7 +4,62 @@
 
 @layer base {
   :root {
-    /* Tema escuro por padrão — estilo glassmorphism da tela de login */
+    /* Tema claro padrão */
+    --background: 0 0% 100%;
+    --foreground: 25 25% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 25 25% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 25% 12%;
+
+    --primary: 24 90% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 36 95% 52%;
+    --secondary-foreground: 25 30% 8%;
+
+    --muted: 30 15% 96%;
+    --muted-foreground: 25 10% 40%;
+
+    --accent: 30 60% 95%;
+    --accent-foreground: 24 90% 40%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 93% 47%;
+    --warning-foreground: 25 30% 12%;
+
+    --info: 200 80% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 30 15% 90%;
+    --input: 30 15% 90%;
+    --ring: 24 90% 50%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 99%;
+    --sidebar-foreground: 25 20% 25%;
+    --sidebar-primary: 24 90% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 30% 95%;
+    --sidebar-accent-foreground: 24 90% 40%;
+    --sidebar-border: 30 15% 90%;
+    --sidebar-ring: 24 90% 50%;
+
+    --pole-active: 142 70% 45%;
+    --pole-warning: 45 93% 47%;
+    --pole-error: 0 72% 51%;
+    --pole-maintenance: 24 95% 53%;
+  }
+
+  .dark {
     --background: 25 25% 8%;
     --foreground: 40 20% 92%;
 
@@ -14,23 +69,18 @@
     --popover: 25 20% 14%;
     --popover-foreground: 40 20% 92%;
 
-    /* Laranja/âmbar vibrante — Principal */
     --primary: 36 95% 52%;
     --primary-foreground: 25 30% 8%;
 
-    /* Laranja mais escuro — Secundário */
     --secondary: 24 90% 48%;
     --secondary-foreground: 0 0% 100%;
 
-    /* Superfícies sutis */
     --muted: 25 18% 14%;
     --muted-foreground: 35 12% 55%;
 
-    /* Accent — tom âmbar sutil */
     --accent: 30 25% 16%;
     --accent-foreground: 36 95% 60%;
 
-    /* Estados */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
@@ -47,9 +97,6 @@
     --input: 30 15% 18%;
     --ring: 36 95% 52%;
 
-    --radius: 0.75rem;
-
-    /* Sidebar — escuro com destaque âmbar */
     --sidebar-background: 25 22% 10%;
     --sidebar-foreground: 40 15% 80%;
     --sidebar-primary: 36 95% 52%;
@@ -58,12 +105,6 @@
     --sidebar-accent-foreground: 40 15% 90%;
     --sidebar-border: 30 15% 16%;
     --sidebar-ring: 36 95% 52%;
-
-    /* Cores específicas do sistema */
-    --pole-active: 142 70% 45%;
-    --pole-warning: 45 93% 47%;
-    --pole-error: 0 72% 51%;
-    --pole-maintenance: 24 95% 53%;
   }
 }
 
