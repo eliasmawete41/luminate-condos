@@ -47,7 +47,7 @@ export default function TechnicianDashboard() {
 
   useEffect(() => {
     fetchMaintenances();
-    // Realtime for maintenances
+    // Tempo real para manutenções
     const channel = supabase
       .channel('tech-maintenances')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'maintenances' }, () => {
@@ -146,7 +146,7 @@ export default function TechnicianDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="rounded-2xl gradient-sunset p-6 text-white shadow-xl">
         <div className="flex items-center gap-3 mb-1">
           <div className="p-2 rounded-xl bg-white/20">
@@ -159,7 +159,7 @@ export default function TechnicianDashboard() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Estatísticas */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-500/5 to-transparent">
           <CardContent className="pt-6">
