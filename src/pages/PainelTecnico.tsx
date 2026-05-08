@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/cartao';
+import { Button } from '@/components/ui/botao';
+import { Badge } from '@/components/ui/etiqueta';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialogo';
+import { Textarea } from '@/components/ui/area-texto';
+import { Label } from '@/components/ui/rotulo';
 import {
   Wrench, CheckCircle2, AlertTriangle, Clock, Loader2,
   MapPin, Zap, Timer, Bell, ThumbsUp

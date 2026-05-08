@@ -1,9 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/cartao';
+import { Button } from '@/components/ui/botao';
+import { Input } from '@/components/ui/entrada';
+import { Label } from '@/components/ui/rotulo';
+import { Switch } from '@/components/ui/interruptor';
+import { Separator } from '@/components/ui/separador';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   User, 

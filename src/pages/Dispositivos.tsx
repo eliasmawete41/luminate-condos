@@ -1,15 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/botao';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/cartao';
+import { Badge } from '@/components/ui/etiqueta';
+import { Input } from '@/components/ui/entrada';
+import { Label } from '@/components/ui/rotulo';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/selecao';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/tabela';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialogo';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/abas';
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus, Check, X, Cpu, RefreshCw, Copy, Eye,

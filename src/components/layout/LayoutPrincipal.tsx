@@ -1,9 +1,9 @@
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/barra-lateral';
 import { AppSidebar } from './BarraLateral';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Bell, Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/botao';
 
 export function AppLayout() {
   const { user, loading, isSindico, roles } = useAuth();
