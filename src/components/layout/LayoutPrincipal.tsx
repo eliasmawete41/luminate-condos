@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { AppSidebar } from './AppSidebar';
-import { useAuth } from '@/contexts/AuthContext';
+import { AppSidebar } from './BarraLateral';
+import { useAuth } from '@/contexts/ContextoAutenticacao';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Bell, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';

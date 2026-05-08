@@ -16,7 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/ContextoAutenticacao';
 import type { Database } from '@/integrations/supabase/types';
 
 type Notificacao = Database['public']['Tables']['notifications']['Row'];
