@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, MapPin, Lamp } from 'lucide-react';
 import { Badge } from '@/components/ui/etiqueta';
 import { supabase } from '@/integrations/supabase/client';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -22,6 +22,10 @@ const coresStatus: Record<string, string> = {
   em_manutencao: '#3b82f6',
   desativado: '#6b7280',
 };
+
+// Centro do Condomínio Jardim de Rosa (Talatona, Luanda)
+const CENTRO_CONDOMINIO: [number, number] = [-8.9183, 13.1830];
+const RAIO_CONDOMINIO_METROS = 400;
 
 // Interface do poste no mapa
 interface PosteMapa {
@@ -53,12 +57,27 @@ export default function PaginaMapa() {
     buscarPostes();
   }, []);
 
-  // Buscar postes com coordenadas
+  // Buscar todos os postes; distribui em volta do condomínio se não tiverem coordenadas
   const buscarPostes = async () => {
     const { data } = await supabase
       .from('poles')
       .select('id, code, location_description, latitude, longitude, status, lighting_type, power_watts');
-    setPostes((data || []).filter((p: any) => p.latitude && p.longitude));
+    const lista = data || [];
+    const semCoord = lista.filter((p: any) => !p.latitude || !p.longitude);
+    const total = Math.max(semCoord.length, 1);
+    const comCoordenadas = lista.map((p: any) => {
+      if (p.latitude && p.longitude) return p;
+      // Distribui os postes sem coordenadas em círculo ao redor do centro
+      const idx = semCoord.findIndex((x: any) => x.id === p.id);
+      const angulo = (idx / total) * 2 * Math.PI;
+      const raio = 0.0015; // ~150m
+      return {
+        ...p,
+        latitude: CENTRO_CONDOMINIO[0] + raio * Math.cos(angulo),
+        longitude: CENTRO_CONDOMINIO[1] + raio * Math.sin(angulo),
+      };
+    });
+    setPostes(comCoordenadas);
     setCarregando(false);
   };
 
@@ -70,10 +89,11 @@ export default function PaginaMapa() {
     );
   }
 
-  // Centro do mapa (primeiro poste ou Luanda como padrão)
-  const centro: [number, number] = postes.length > 0
-    ? [postes[0].latitude!, postes[0].longitude!]
-    : [-8.838333, 13.234444];
+  // Limites do mapa restritos ao condomínio
+  const limites: L.LatLngBoundsExpression = [
+    [CENTRO_CONDOMINIO[0] - 0.006, CENTRO_CONDOMINIO[1] - 0.006],
+    [CENTRO_CONDOMINIO[0] + 0.006, CENTRO_CONDOMINIO[1] + 0.006],
+  ];
 
   return (
     <div className="space-y-4">
@@ -89,14 +109,23 @@ export default function PaginaMapa() {
         <CardContent className="p-0">
           <div className="h-[calc(100vh-280px)] min-h-[400px]">
             <MapContainer
-              center={centro}
-              zoom={15}
+              center={CENTRO_CONDOMINIO}
+              zoom={17}
+              minZoom={16}
+              maxZoom={19}
+              maxBounds={limites}
+              maxBoundsViscosity={1.0}
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={true}
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <Circle
+                center={CENTRO_CONDOMINIO}
+                radius={RAIO_CONDOMINIO_METROS}
+                pathOptions={{ color: '#f97316', fillColor: '#f97316', fillOpacity: 0.08, weight: 2 }}
               />
               {postes.map((poste) => (
                 <Marker
