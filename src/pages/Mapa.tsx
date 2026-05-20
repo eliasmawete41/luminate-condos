@@ -41,6 +41,18 @@ interface PosteMapa {
   status: string | null;
   lighting_type: string;
   power_watts: number;
+  last_maintenance_date: string | null;
+}
+
+interface ManutencaoMapa {
+  id: string;
+  pole_id: string;
+  failure_type: string;
+  status: string;
+  scheduled_date: string | null;
+  completed_date: string | null;
+  description: string;
+  created_at: string;
 }
 
 // Criar ícone colorido para marcador
