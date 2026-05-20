@@ -67,34 +67,71 @@ function criarIconeColorido(cor: string) {
 
 export default function PaginaMapa() {
   const [postes, setPostes] = useState<PosteMapa[]>([]);
+  const [manutencoes, setManutencoes] = useState<ManutencaoMapa[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [dialogoAberto, setDialogoAberto] = useState(false);
+  const [posteSelecionado, setPosteSelecionado] = useState<PosteMapa | null>(null);
 
   useEffect(() => {
     buscarPostes();
   }, []);
 
-  // Buscar todos os postes; distribui em volta do condomínio se não tiverem coordenadas
+  // Buscar todos os postes e manutenções
   const buscarPostes = async () => {
-    const { data } = await supabase
-      .from('poles')
-      .select('id, code, location_description, latitude, longitude, status, lighting_type, power_watts');
-    const lista = data || [];
-    const semCoord = lista.filter((p: any) => !p.latitude || !p.longitude);
+    const [resPostes, resManutencoes] = await Promise.all([
+      supabase
+        .from('poles')
+        .select('id, code, location_description, latitude, longitude, status, lighting_type, power_watts'),
+      supabase
+        .from('maintenances')
+        .select('id, pole_id, failure_type, status, scheduled_date, completed_date, description, created_at')
+        .order('created_at', { ascending: false }),
+    ]);
+
+    const listaPostes = resPostes.data || [];
+    const listaManutencoes = (resManutencoes.data || []) as ManutencaoMapa[];
+    setManutencoes(listaManutencoes);
+
+    // Mapear última manutenção por poste
+    const ultimaPorPoste: Record<string, string> = {};
+    listaManutencoes.forEach((m) => {
+      if (!ultimaPorPoste[m.pole_id]) {
+        ultimaPorPoste[m.pole_id] = m.completed_date || m.scheduled_date || m.created_at;
+      }
+    });
+
+    const semCoord = listaPostes.filter((p: any) => !p.latitude || !p.longitude);
     const total = Math.max(semCoord.length, 1);
-    const comCoordenadas = lista.map((p: any) => {
-      if (p.latitude && p.longitude) return p;
-      // Distribui os postes sem coordenadas em círculo ao redor do centro
+    const comCoordenadas: PosteMapa[] = listaPostes.map((p: any) => {
+      if (p.latitude && p.longitude) {
+        return { ...p, last_maintenance_date: ultimaPorPoste[p.id] || null };
+      }
       const idx = semCoord.findIndex((x: any) => x.id === p.id);
       const angulo = (idx / total) * 2 * Math.PI;
-      const raio = 0.0015; // ~150m
+      const raio = 0.0015;
       return {
         ...p,
         latitude: CENTRO_CONDOMINIO[0] + raio * Math.cos(angulo),
         longitude: CENTRO_CONDOMINIO[1] + raio * Math.sin(angulo),
+        last_maintenance_date: ultimaPorPoste[p.id] || null,
       };
     });
     setPostes(comCoordenadas);
     setCarregando(false);
+  };
+
+  const abrirHistorico = (poste: PosteMapa) => {
+    setPosteSelecionado(poste);
+    setDialogoAberto(true);
+  };
+
+  const historicoPoste = posteSelecionado
+    ? manutencoes.filter((m) => m.pole_id === posteSelecionado.id)
+    : [];
+
+  const formatarData = (d: string | null) => {
+    if (!d) return '-';
+    return new Date(d).toLocaleDateString('pt-BR');
   };
 
   if (carregando) {
@@ -150,12 +187,22 @@ export default function PaginaMapa() {
                   icon={criarIconeColorido(coresStatus[poste.status || 'funcionando'])}
                 >
                   <Popup>
-                    <div className="text-sm space-y-1">
-                      <p className="font-bold">{poste.code}</p>
-                      <p>{poste.location_description}</p>
-                      <p>Tipo: {poste.lighting_type}</p>
-                      <p>Potência: {poste.power_watts}W</p>
-                      <p>Status: {poste.status || 'funcionando'}</p>
+                    <div className="text-sm space-y-1 min-w-[180px]">
+                      <p className="font-bold text-base">{poste.code}</p>
+                      <p className="text-muted-foreground">{poste.location_description}</p>
+                      <p><span className="font-medium">Tipo:</span> {poste.lighting_type}</p>
+                      <p><span className="font-medium">Potência:</span> {poste.power_watts}W</p>
+                      <p><span className="font-medium">Status:</span> {poste.status?.replace('_', ' ') || 'funcionando'}</p>
+                      <p><span className="font-medium">Última manutenção:</span> {formatarData(poste.last_maintenance_date)}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2 w-full gap-1"
+                        onClick={() => abrirHistorico(poste)}
+                      >
+                        <History className="h-3.5 w-3.5" />
+                        Ver histórico
+                      </Button>
                     </div>
                   </Popup>
                 </Marker>
@@ -174,6 +221,39 @@ export default function PaginaMapa() {
           </div>
         ))}
       </div>
+
+      {/* Dialog de histórico */}
+      <Dialog open={dialogoAberto} onOpenChange={setDialogoAberto}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Histórico de Manutenções</DialogTitle>
+            <DialogDescription>
+              {posteSelecionado ? `Poste ${posteSelecionado.code}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            {historicoPoste.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma manutenção registrada.</p>
+            ) : (
+              historicoPoste.map((m) => (
+                <div key={m.id} className="border rounded-lg p-3 text-sm space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium capitalize">{m.failure_type.replace('_', ' ')}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {m.status.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground">{m.description}</p>
+                  <div className="flex gap-4 text-xs text-muted-foreground">
+                    <span>Registrado: {formatarData(m.created_at)}</span>
+                    {m.completed_date && <span>Concluído: {formatarData(m.completed_date)}</span>}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
