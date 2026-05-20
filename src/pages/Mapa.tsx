@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/cartao';
-import { Loader2, MapPin, Lamp } from 'lucide-react';
+import { Loader2, MapPin, Lamp, History } from 'lucide-react';
 import { Badge } from '@/components/ui/etiqueta';
+import { Button } from '@/components/ui/botao';
 import { supabase } from '@/integrations/supabase/client';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from '@/components/ui/dialogo';
 
 // Corrigir ícones padrão dos marcadores
 delete (L.Icon.Default.prototype as any)._getIconUrl;
