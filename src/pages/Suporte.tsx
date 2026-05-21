@@ -27,6 +27,8 @@ interface Conversa {
   status: string;
   created_at: string;
   updated_at: string;
+  consumer_name?: string;
+  consumer_email?: string;
 }
 
 // Interface de mensagem
@@ -40,11 +42,16 @@ interface Mensagem {
   created_at: string;
 }
 
-// Respostas automáticas do bot
+// Mensagem de boas-vindas
+const BOAS_VINDAS_BOT = 'Olá! 👋 Sou o assistente virtual do PosteGuard. Deixe a sua mensagem e a administração responderá em breve. Enquanto isso, posso ajudar com algumas dúvidas comuns.';
+
+// Respostas automáticas exibidas enquanto o admin não responde
 const RESPOSTAS_AUTOMATICAS = [
-  'Obrigado pela sua mensagem! Um atendente responderá em breve.',
-  'Sua solicitação foi registrada. O horário de atendimento é das 8h às 18h.',
-  'Para emergências, ligue para o número de suporte do condomínio.',
+  'Recebemos a sua mensagem ✅. Um atendente humano será notificado.',
+  'O horário de atendimento da administração é das 8h às 18h, de segunda a sábado.',
+  'Dica: se a avaria estiver visível, registe também uma ocorrência na secção "Notificações" para acelerar o atendimento.',
+  'Para emergências (poste caído, fios expostos ou risco elétrico), por favor ligue diretamente para o número de suporte.',
+  'Ainda estamos a alertar a administração. Pode adicionar fotos ou mais detalhes à sua mensagem que ajudem a resolver mais rápido.',
 ];
 
 export default function Suporte() {
@@ -58,6 +65,7 @@ export default function Suporte() {
   const [enviando, setEnviando] = useState(false);
   const [telefoneSuporte, setTelefoneSuporte] = useState('');
   const refFimMensagens = useRef<HTMLDivElement>(null);
+  const indiceBotRef = useRef(0);
 
   useEffect(() => {
     buscarConversas();
@@ -104,7 +112,27 @@ export default function Suporte() {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setConversas(data || []);
+      const lista = data || [];
+      // Buscar perfis em paralelo para mostrar o nome do morador
+      const ids = [...new Set(lista.map((c) => c.consumer_id))];
+      let perfis: Record<string, { full_name: string; email: string }> = {};
+      if (ids.length > 0) {
+        const { data: perfilData } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', ids);
+        perfis = (perfilData || []).reduce((acc, p) => {
+          acc[p.id] = { full_name: p.full_name, email: p.email };
+          return acc;
+        }, {} as Record<string, { full_name: string; email: string }>);
+      }
+      setConversas(
+        lista.map((c) => ({
+          ...c,
+          consumer_name: perfis[c.consumer_id]?.full_name,
+          consumer_email: perfis[c.consumer_id]?.email,
+        })),
+      );
     } catch (erro) {
       console.error('Erro:', erro);
     } finally {
@@ -126,24 +154,39 @@ export default function Suporte() {
   // Criar nova conversa
   const criarConversa = async () => {
     if (!usuario) return;
-    
+
     try {
+      // Buscar nome do morador para usar como assunto da conversa
+      const { data: perfil } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', usuario.id)
+        .single();
+
+      const nomeMorador = perfil?.full_name || 'Morador';
+
       const { data, error } = await supabase
         .from('support_conversations')
-        .insert({ consumer_id: usuario.id, subject: 'Novo atendimento' })
+        .insert({ consumer_id: usuario.id, subject: nomeMorador })
         .select()
         .single();
 
       if (error) throw error;
-      
-      setConversas(anterior => [data, ...anterior]);
-      setConversaSelecionada(data);
+
+      const novaConversa = {
+        ...data,
+        consumer_name: nomeMorador,
+        consumer_email: perfil?.email,
+      };
+      setConversas(anterior => [novaConversa, ...anterior]);
+      setConversaSelecionada(novaConversa);
+      indiceBotRef.current = 0;
 
       // Resposta automática
       await supabase.from('support_messages').insert({
         conversation_id: data.id,
         sender_id: usuario.id,
-        message: RESPOSTAS_AUTOMATICAS[0],
+        message: BOAS_VINDAS_BOT,
         is_from_bot: true,
       });
     } catch (erro: any) {
@@ -167,17 +210,23 @@ export default function Suporte() {
       if (error) throw error;
       setNovaMensagem('');
 
-      // Se for consumidor, enviar resposta automática após 2 segundos
+      // Se for morador e o admin ainda não respondeu, enviar mensagem programada
       if (!isAdmin) {
-        setTimeout(async () => {
-          const respostaAleatoria = RESPOSTAS_AUTOMATICAS[Math.floor(Math.random() * RESPOSTAS_AUTOMATICAS.length)];
-          await supabase.from('support_messages').insert({
-            conversation_id: conversaSelecionada.id,
-            sender_id: usuario.id,
-            message: respostaAleatoria,
-            is_from_bot: true,
-          });
-        }, 2000);
+        const adminRespondeu = mensagens.some(
+          (m) => !m.is_from_bot && m.sender_id !== usuario.id,
+        );
+        if (!adminRespondeu) {
+          const resposta = RESPOSTAS_AUTOMATICAS[indiceBotRef.current % RESPOSTAS_AUTOMATICAS.length];
+          indiceBotRef.current += 1;
+          setTimeout(async () => {
+            await supabase.from('support_messages').insert({
+              conversation_id: conversaSelecionada.id,
+              sender_id: usuario.id,
+              message: resposta,
+              is_from_bot: true,
+            });
+          }, 1500);
+        }
       }
     } catch (erro: any) {
       toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
@@ -253,11 +302,16 @@ export default function Suporte() {
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm truncate">{conv.subject}</span>
+                      <span className="font-medium text-sm truncate">
+                        {conv.consumer_name || conv.subject}
+                      </span>
                       <Badge variant={conv.status === 'aberto' ? 'default' : 'secondary'} className="text-[10px] px-1.5">
                         {conv.status}
                       </Badge>
                     </div>
+                    {isAdmin && conv.consumer_email && (
+                      <p className="text-[11px] text-muted-foreground truncate">{conv.consumer_email}</p>
+                    )}
                     <span className="text-xs text-muted-foreground">{formatarData(conv.created_at)}</span>
                   </div>
                 ))}
@@ -276,8 +330,13 @@ export default function Suporte() {
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <div>
-                    <CardTitle className="text-base">{conversaSelecionada.subject}</CardTitle>
+                    <CardTitle className="text-base">
+                      {conversaSelecionada.consumer_name || conversaSelecionada.subject}
+                    </CardTitle>
                     <p className="text-xs text-muted-foreground">
+                      {isAdmin && conversaSelecionada.consumer_email
+                        ? `${conversaSelecionada.consumer_email} • `
+                        : ''}
                       Iniciada em {formatarData(conversaSelecionada.created_at)}
                     </p>
                   </div>
