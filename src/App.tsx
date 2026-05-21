@@ -13,6 +13,7 @@ import ConsumerDashboard from "./pages/PainelMorador";
 import TechnicianDashboard from "./pages/PainelTecnico";
 import Poles from "./pages/Postes";
 import Maintenances from "./pages/Manutencoes";
+import Historico from "./pages/Historico";
 import Units from "./pages/Unidades";
 import Users from "./pages/Usuarios";
 import Notifications from "./pages/Notificacoes";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/postes" element={<Poles />} />
               <Route path="/manutencoes" element={<Maintenances />} />
+              <Route path="/historico" element={<Historico />} />
               <Route path="/unidades" element={<Units />} />
               <Route path="/usuarios" element={<Users />} />
               <Route path="/notificacoes" element={<Notifications />} />

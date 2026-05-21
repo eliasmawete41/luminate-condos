@@ -1,7 +1,7 @@
 import { 
   LayoutDashboard, Lamp, Building2, Users, Wrench, Bell, Settings,
   LogOut, Zap, Cpu, MessageCircle, Star, HeadphonesIcon, MapPin,
-  HardHat
+  HardHat, History
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ const adminMenuItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Postes', url: '/postes', icon: Lamp },
   { title: 'Manutenções', url: '/manutencoes', icon: Wrench },
+  { title: 'Histórico', url: '/historico', icon: History },
   { title: 'Mapa', url: '/mapa', icon: MapPin },
 ];
 
