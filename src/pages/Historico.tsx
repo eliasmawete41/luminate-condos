@@ -9,7 +9,14 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/selecao';
-import { History, Search, Download, Loader2, CheckCircle2, XCircle, Calendar } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialogo';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/abas';
+import {
+  History, Search, Download, Loader2, CheckCircle2, XCircle, Calendar,
+  Eye, AlertTriangle, Wrench, LayoutList,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -59,12 +66,28 @@ const diasEntre = (inicio: string | null, fim: string | null) => {
   return `${dias} dia${dias === 1 ? '' : 's'}`;
 };
 
+type CategoriaHistorico = 'geral' | 'avaria' | 'manutencao';
+
+const rotuloCategoria: Record<CategoriaHistorico, string> = {
+  geral: 'Histórico Geral',
+  avaria: 'Avarias Resolvidas',
+  manutencao: 'Manutenções Concluídas',
+};
+
+// Tipos de falha considerados "avaria" (relatadas como problema/quebra)
+const TIPOS_AVARIA = new Set([
+  'lampada_queimada', 'curto_circuito', 'oscilacao',
+  'fiacao_danificada', 'poste_danificado',
+]);
+
 export default function Historico() {
   const { toast } = useToast();
   const [registros, setRegistros] = useState<Ocorrencia[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroResultado, setFiltroResultado] = useState<string>('all');
+  const [categoria, setCategoria] = useState<CategoriaHistorico>('geral');
+  const [registroVisualizando, setRegistroVisualizando] = useState<Ocorrencia | null>(null);
 
   useEffect(() => {
     buscarHistorico();
@@ -96,13 +119,17 @@ export default function Historico() {
         r.description.toLowerCase().includes(busca) ||
         (tiposFalha[r.failure_type] || r.failure_type).toLowerCase().includes(busca);
       const correspondeResultado = filtroResultado === 'all' || r.status === filtroResultado;
-      return correspondeBusca && correspondeResultado;
+      const correspondeCategoria =
+        categoria === 'geral' ||
+        (categoria === 'avaria' && TIPOS_AVARIA.has(r.failure_type)) ||
+        (categoria === 'manutencao' && !TIPOS_AVARIA.has(r.failure_type));
+      return correspondeBusca && correspondeResultado && correspondeCategoria;
     });
-  }, [registros, termoBusca, filtroResultado]);
+  }, [registros, termoBusca, filtroResultado, categoria]);
 
-  const totalConcluidas = registros.filter((r) => r.status === 'concluido').length;
-  const totalCanceladas = registros.filter((r) => r.status === 'cancelado').length;
-  const custoTotal = registros.reduce((acc, r) => acc + (Number(r.cost) || 0), 0);
+  const totalConcluidas = registrosFiltrados.filter((r) => r.status === 'concluido').length;
+  const totalCanceladas = registrosFiltrados.filter((r) => r.status === 'cancelado').length;
+  const custoTotal = registrosFiltrados.reduce((acc, r) => acc + (Number(r.cost) || 0), 0);
 
   const baixarPdf = () => {
     try {
@@ -115,7 +142,7 @@ export default function Historico() {
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(16);
-      doc.text('PosteGuard — Histórico de Ocorrências Resolvidas', 14, 14);
+      doc.text(`PosteGuard — ${rotuloCategoria[categoria]}`, 14, 14);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, larguraPagina - 14, 14, { align: 'right' });
@@ -175,7 +202,7 @@ export default function Historico() {
         },
       });
 
-      const nomeArquivo = `historico-ocorrencias-${new Date().toISOString().split('T')[0]}.pdf`;
+      const nomeArquivo = `historico-${categoria}-${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(nomeArquivo);
       toast({ title: 'PDF gerado', description: nomeArquivo });
     } catch (erro: any) {
@@ -200,7 +227,7 @@ export default function Historico() {
             <div className="p-2 rounded-xl bg-white/20"><History className="h-6 w-6" /></div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight md:text-3xl drop-shadow-sm">Histórico de Ocorrências</h1>
-              <p className="text-white/80">Registros de manutenções resolvidas e canceladas</p>
+              <p className="text-white/80">Avarias, manutenções e registros gerais do condomínio</p>
             </div>
           </div>
           <Button
@@ -213,6 +240,21 @@ export default function Historico() {
           </Button>
         </div>
       </div>
+
+      {/* Abas de categoria */}
+      <Tabs value={categoria} onValueChange={(v) => setCategoria(v as CategoriaHistorico)}>
+        <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+          <TabsTrigger value="geral" className="gap-2 py-2">
+            <LayoutList className="h-4 w-4" /> Geral
+          </TabsTrigger>
+          <TabsTrigger value="avaria" className="gap-2 py-2">
+            <AlertTriangle className="h-4 w-4" /> Avarias
+          </TabsTrigger>
+          <TabsTrigger value="manutencao" className="gap-2 py-2">
+            <Wrench className="h-4 w-4" /> Manutenções
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Resumo */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -282,7 +324,7 @@ export default function Historico() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5 text-primary" />Histórico Detalhado
+            <History className="h-5 w-5 text-primary" />{rotuloCategoria[categoria]}
           </CardTitle>
           <CardDescription>{registrosFiltrados.length} registro(s) encontrado(s)</CardDescription>
         </CardHeader>
@@ -300,6 +342,7 @@ export default function Historico() {
                     <TableHead>Data da Resolução</TableHead>
                     <TableHead>Duração</TableHead>
                     <TableHead>Observações</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -332,6 +375,16 @@ export default function Historico() {
                         <TableCell className="text-sm max-w-xs">
                           <p className="line-clamp-2">{r.resolution_notes || r.description}</p>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1"
+                            onClick={() => setRegistroVisualizando(r)}
+                          >
+                            <Eye className="h-4 w-4" /> Ver
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -346,6 +399,105 @@ export default function Historico() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de visualização detalhada */}
+      <Dialog open={!!registroVisualizando} onOpenChange={(o) => !o && setRegistroVisualizando(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Detalhes da Ocorrência
+            </DialogTitle>
+            <DialogDescription>
+              Visualize todas as informações antes de exportar.
+            </DialogDescription>
+          </DialogHeader>
+
+          {registroVisualizando && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted/40 p-4">
+                <p className="text-xs uppercase text-muted-foreground">Poste</p>
+                <p className="font-semibold text-base">{registroVisualizando.poles?.code || 'N/A'}</p>
+                <p className="text-sm text-muted-foreground">
+                  {registroVisualizando.poles?.location_description || 'Sem localização registrada'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Tipo de Falha</p>
+                  <p className="font-medium">
+                    {tiposFalha[registroVisualizando.failure_type] || registroVisualizando.failure_type}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Prioridade</p>
+                  <Badge variant="secondary" className={cn(configPrioridade[registroVisualizando.priority || 'media'].cor)}>
+                    {configPrioridade[registroVisualizando.priority || 'media'].rotulo}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Resultado</p>
+                  <Badge variant="outline" className={cn(
+                    registroVisualizando.status === 'concluido'
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200'
+                      : 'bg-slate-500/10 text-slate-600 border-slate-200',
+                  )}>
+                    {registroVisualizando.status === 'concluido' ? 'Concluído' : 'Cancelado'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Custo</p>
+                  <p className="font-medium">
+                    {registroVisualizando.cost
+                      ? Number(registroVisualizando.cost).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                      : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Data da Ocorrência</p>
+                  <p className="text-sm">{formatarDataHora(registroVisualizando.created_at)}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Data da Resolução</p>
+                  <p className="text-sm">{formatarData(registroVisualizando.completed_date)}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs uppercase text-muted-foreground">Duração</p>
+                  <p className="text-sm font-medium">
+                    {diasEntre(registroVisualizando.created_at, registroVisualizando.completed_date)}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs uppercase text-muted-foreground mb-1">Descrição da Avaria</p>
+                <p className="text-sm bg-muted/30 rounded-md p-3 leading-relaxed">
+                  {registroVisualizando.description || 'Sem descrição registrada.'}
+                </p>
+              </div>
+
+              {registroVisualizando.resolution_notes && (
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground mb-1">Notas de Resolução</p>
+                  <p className="text-sm bg-emerald-500/5 border border-emerald-500/20 rounded-md p-3 leading-relaxed">
+                    {registroVisualizando.resolution_notes}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setRegistroVisualizando(null)}>
+                  Fechar
+                </Button>
+                <Button onClick={baixarPdf} className="gap-2">
+                  <Download className="h-4 w-4" /> Baixar PDF
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
