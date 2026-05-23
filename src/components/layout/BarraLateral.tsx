@@ -57,11 +57,12 @@ export function AppSidebar() {
 
   const renderMenuItem = (item: { title: string; url: string; icon: React.ElementType }) => (
     <SidebarMenuItem key={item.title}>
-      <SidebarMenuButton asChild isActive={isActive(item.url)}>
+      <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
         <NavLink 
           to={item.url} 
           className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+            "flex items-center gap-3 rounded-xl transition-all duration-200",
+            collapsed ? "justify-center px-0 py-2" : "px-3 py-2.5",
             isActive(item.url) 
               ? "gradient-primary text-primary-foreground shadow-lg shadow-primary/20" 
               : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-white/[0.06]"
@@ -77,10 +78,13 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar-background">
       {/* Cabeçalho com logo */}
-      <SidebarHeader className="p-4 pb-6">
+      <SidebarHeader className={cn("pb-6", collapsed ? "p-2" : "p-4")}>
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl gradient-primary shadow-lg shadow-primary/25">
-            <Zap className="h-6 w-6 text-primary-foreground" />
+          <div className={cn(
+            "flex items-center justify-center rounded-2xl gradient-primary shadow-lg shadow-primary/25 shrink-0",
+            collapsed ? "h-9 w-9" : "h-11 w-11"
+          )}>
+            <Zap className={cn(collapsed ? "h-5 w-5" : "h-6 w-6", "text-primary-foreground")} />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
@@ -93,7 +97,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3">
+      <SidebarContent className={cn(collapsed ? "px-1" : "px-3")}>
         {isConsumer ? (
           <SidebarGroup>
             <SidebarGroupLabel className={cn("text-[11px] uppercase tracking-wider text-sidebar-foreground/30 mb-1", collapsed && "sr-only")}>Menu</SidebarGroupLabel>
@@ -123,9 +127,9 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Rodapé com perfil */}
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <Avatar className="h-9 w-9 ring-2 ring-primary/20">
+      <SidebarFooter className={cn("border-t border-sidebar-border", collapsed ? "p-2" : "p-4")}>
+        <div className={cn("flex items-center gap-3", collapsed && "flex-col gap-2")}>
+          <Avatar className={cn("ring-2 ring-primary/20 shrink-0", collapsed ? "h-8 w-8" : "h-9 w-9")}>
             <AvatarImage src={profile?.avatar_url || undefined} />
             <AvatarFallback className="gradient-primary text-primary-foreground text-sm font-semibold">
               {profile?.full_name?.charAt(0) || 'U'}
@@ -137,12 +141,18 @@ export function AppSidebar() {
               <p className="text-xs text-sidebar-foreground/40 truncate">{profile?.email}</p>
             </div>
           )}
-          {!collapsed && (
-            <Button variant="ghost" size="icon" onClick={signOut}
-              className="text-sidebar-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={signOut}
+            title="Sair"
+            className={cn(
+              "text-sidebar-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors",
+              collapsed ? "h-8 w-8" : ""
+            )}
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
