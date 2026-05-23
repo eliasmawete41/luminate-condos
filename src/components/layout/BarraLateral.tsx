@@ -57,12 +57,12 @@ export function AppSidebar() {
 
   const renderMenuItem = (item: { title: string; url: string; icon: React.ElementType }) => (
     <SidebarMenuItem key={item.title}>
-      <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+      <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title} className={cn(collapsed && "!h-10 !w-10 !p-0 mx-auto")}>
         <NavLink 
           to={item.url} 
           className={cn(
             "flex items-center gap-3 rounded-xl transition-all duration-200",
-            collapsed ? "justify-center px-0 py-2" : "px-3 py-2.5",
+            collapsed ? "justify-center !p-0 h-10 w-10" : "px-3 py-2.5",
             isActive(item.url) 
               ? "gradient-primary text-primary-foreground shadow-lg shadow-primary/20" 
               : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-white/[0.06]"
@@ -97,7 +97,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className={cn(collapsed ? "px-1" : "px-3")}>
+      <SidebarContent className={cn(collapsed ? "px-1.5" : "px-3")}>
         {isConsumer ? (
           <SidebarGroup>
             <SidebarGroupLabel className={cn("text-[11px] uppercase tracking-wider text-sidebar-foreground/30 mb-1", collapsed && "sr-only")}>Menu</SidebarGroupLabel>
