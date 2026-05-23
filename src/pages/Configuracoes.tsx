@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/cartao';
 import { Button } from '@/components/ui/botao';
 import { Input } from '@/components/ui/entrada';
@@ -5,18 +6,66 @@ import { Label } from '@/components/ui/rotulo';
 import { Switch } from '@/components/ui/interruptor';
 import { Separator } from '@/components/ui/separador';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialogo';
+import { Alert, AlertDescription } from '@/components/ui/alerta';
 import { 
   User, 
   Bell, 
   Shield, 
   Palette,
   Save,
-  Camera
+  Camera,
+  Loader2,
+  AlertCircle,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function Configuracoes() {
   const { profile: perfil } = useAuth();
+  const [abrirSenha, setAbrirSenha] = useState(false);
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmacao, setConfirmacao] = useState('');
+  const [salvandoSenha, setSalvandoSenha] = useState(false);
+  const [erroSenha, setErroSenha] = useState<string | null>(null);
+
+  const handleAlterarSenha = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErroSenha(null);
+    if (novaSenha.length < 6) {
+      setErroSenha('A senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+    if (novaSenha !== confirmacao) {
+      setErroSenha('As senhas não coincidem');
+      return;
+    }
+    setSalvandoSenha(true);
+    const { error } = await supabase.auth.updateUser({ password: novaSenha });
+    setSalvandoSenha(false);
+    if (error) {
+      setErroSenha(error.message);
+      return;
+    }
+    toast.success('Senha alterada com sucesso!');
+    setNovaSenha('');
+    setConfirmacao('');
+    setAbrirSenha(false);
+  };
+
+  const handleEnviarLinkRecuperacao = async () => {
+    if (!perfil?.email) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(perfil.email, {
+      redirectTo: `${window.location.origin}/redefinir-senha`,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Email de recuperação enviado!');
+  };
 
   return (
     <div className="space-y-6">
@@ -158,14 +207,71 @@ export default function Configuracoes() {
                 Segurança
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Button variant="outline" className="w-full">
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full gap-2" onClick={() => setAbrirSenha(true)}>
+                <KeyRound className="h-4 w-4" />
                 Alterar Senha
+              </Button>
+              <Button variant="ghost" className="w-full text-sm" onClick={handleEnviarLinkRecuperacao}>
+                Enviar link de recuperação por email
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <Dialog open={abrirSenha} onOpenChange={setAbrirSenha}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" />
+              Alterar senha
+            </DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha de acesso à sua conta.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAlterarSenha} className="space-y-4">
+            {erroSenha && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{erroSenha}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="nova-senha">Nova senha</Label>
+              <Input
+                id="nova-senha"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={novaSenha}
+                onChange={(e) => setNovaSenha(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmar-senha">Confirmar nova senha</Label>
+              <Input
+                id="confirmar-senha"
+                type="password"
+                placeholder="Repita a nova senha"
+                value={confirmacao}
+                onChange={(e) => setConfirmacao(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setAbrirSenha(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={salvandoSenha} className="gap-2">
+                {salvandoSenha && <Loader2 className="h-4 w-4 animate-spin" />}
+                Salvar nova senha
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
