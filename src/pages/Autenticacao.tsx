@@ -3,9 +3,11 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
 import { Button } from '@/components/ui/botao';
 import { Alert, AlertDescription } from '@/components/ui/alerta';
-import { Zap, Mail, Lock, AlertCircle, Loader2, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
+import { Zap, Mail, Lock, AlertCircle, Loader2, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, KeyRound, X } from 'lucide-react';
 import { z } from 'zod';
 import condoBg from '@/assets/condominio-bg.png';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const esquemaLogin = z.object({
   email: z.string().email('Email inválido'),
@@ -19,6 +21,9 @@ export default function Auth() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
   const [dadosLogin, setDadosLogin] = useState({ email: '', senha: '' });
+  const [mostrarRecuperar, setMostrarRecuperar] = useState(false);
+  const [emailRecuperar, setEmailRecuperar] = useState('');
+  const [recuperando, setRecuperando] = useState(false);
 
   if (loading) {
     return (
@@ -176,6 +181,16 @@ export default function Auth() {
                         {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
+                  </div>
+
+                  <div className="flex justify-end -mt-2">
+                    <button
+                      type="button"
+                      onClick={() => { setEmailRecuperar(dadosLogin.email); setMostrarRecuperar(true); }}
+                      className="text-xs text-amber-300 hover:text-amber-200 font-medium transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
                   </div>
 
                   <Button
