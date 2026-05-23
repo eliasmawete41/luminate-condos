@@ -8,6 +8,7 @@ import { ProvedorTema } from "@/contexts/ContextoTema";
 import { AppLayout } from "@/components/layout/LayoutPrincipal";
 
 import Auth from "./pages/Autenticacao";
+import RedefinirSenha from "./pages/RedefinirSenha";
 import Dashboard from "./pages/Painel";
 import ConsumerDashboard from "./pages/PainelMorador";
 import TechnicianDashboard from "./pages/PainelTecnico";
@@ -36,6 +37,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/redefinir-senha" element={<RedefinirSenha />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route element={<AppLayout />}>
               {/* Rotas de administrador */}

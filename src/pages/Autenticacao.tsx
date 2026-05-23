@@ -3,9 +3,11 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
 import { Button } from '@/components/ui/botao';
 import { Alert, AlertDescription } from '@/components/ui/alerta';
-import { Zap, Mail, Lock, AlertCircle, Loader2, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
+import { Zap, Mail, Lock, AlertCircle, Loader2, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, KeyRound, X } from 'lucide-react';
 import { z } from 'zod';
 import condoBg from '@/assets/condominio-bg.png';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const esquemaLogin = z.object({
   email: z.string().email('Email inválido'),
@@ -19,6 +21,9 @@ export default function Auth() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
   const [dadosLogin, setDadosLogin] = useState({ email: '', senha: '' });
+  const [mostrarRecuperar, setMostrarRecuperar] = useState(false);
+  const [emailRecuperar, setEmailRecuperar] = useState('');
+  const [recuperando, setRecuperando] = useState(false);
 
   if (loading) {
     return (
@@ -178,6 +183,16 @@ export default function Auth() {
                     </div>
                   </div>
 
+                  <div className="flex justify-end -mt-2">
+                    <button
+                      type="button"
+                      onClick={() => { setEmailRecuperar(dadosLogin.email); setMostrarRecuperar(true); }}
+                      className="text-xs text-amber-300 hover:text-amber-200 font-medium transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+
                   <Button
                     type="submit"
                     className="w-full h-12 font-semibold rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white shadow-lg shadow-orange-500/30 border-0 transition-all duration-300"
@@ -208,6 +223,72 @@ export default function Auth() {
           </div>
         </div>
       </div>
+
+      {mostrarRecuperar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-white/15 bg-gradient-to-br from-slate-900 to-slate-950 shadow-2xl p-6 relative">
+            <button
+              onClick={() => setMostrarRecuperar(false)}
+              className="absolute top-4 right-4 text-white/40 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500">
+                <KeyRound className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Recuperar senha</h3>
+                <p className="text-xs text-white/60">Enviaremos um link para o seu email</p>
+              </div>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!emailRecuperar) {
+                  toast.error('Informe o seu email');
+                  return;
+                }
+                setRecuperando(true);
+                const { error } = await supabase.auth.resetPasswordForEmail(emailRecuperar, {
+                  redirectTo: `${window.location.origin}/redefinir-senha`,
+                });
+                setRecuperando(false);
+                if (error) {
+                  toast.error(error.message);
+                  return;
+                }
+                toast.success('Email enviado! Verifique a sua caixa de entrada.');
+                setMostrarRecuperar(false);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-2 block">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                  <input
+                    type="email"
+                    placeholder="seu@email.com"
+                    autoFocus
+                    className="w-full h-12 pl-11 pr-4 rounded-xl bg-white/5 border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-amber-400/60 text-sm"
+                    value={emailRecuperar}
+                    onChange={(e) => setEmailRecuperar(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                disabled={recuperando}
+                className="w-full h-12 font-semibold rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white shadow-lg shadow-orange-500/30 border-0"
+              >
+                {recuperando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {recuperando ? 'Enviando...' : 'Enviar link de recuperação'}
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
