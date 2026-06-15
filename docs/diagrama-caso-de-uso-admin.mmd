@@ -1,0 +1,70 @@
+%% Diagrama de Caso de Uso - Administrador (PosteGuard)
+flowchart LR
+    Admin(("👤 Administrador"))
+
+    subgraph Sistema["Sistema PosteGuard"]
+        direction TB
+
+        subgraph Mon["Monitoramento"]
+            UC1(["Visualizar Dashboard"])
+            UC2(["Gerenciar Postes"])
+            UC2a(["Excluir Poste"])
+            UC2b(["Alterar Status do Poste"])
+            UC3(["Visualizar Mapa"])
+            UC4(["Visualizar Histórico"])
+        end
+
+        subgraph Manut["Manutenção"]
+            UC5(["Gerenciar Ordens de Manutenção"])
+            UC5a(["Criar Ordem"])
+            UC5b(["Acompanhar Ordem"])
+            UC5c(["Encerrar Ordem"])
+        end
+
+        subgraph Usr["Gestão de Usuários"]
+            UC6(["Visualizar Usuários"])
+            UC7(["Cadastrar Usuário"])
+            UC8(["Alterar Perfil de Usuário"])
+        end
+
+        subgraph IoT["Dispositivos IoT"]
+            UC9(["Gerenciar Dispositivos ESP32"])
+            UC9a(["Monitorar Leituras em Tempo Real"])
+        end
+
+        subgraph Sup["Suporte e Comunicação"]
+            UC10(["Visualizar Todas as Conversas"])
+            UC11(["Responder Moradores"])
+            UC12(["Visualizar Notificações"])
+        end
+
+        subgraph Sis["Sistema"]
+            UC13(["Configurar Sistema"])
+            UC14(["Alterar Senha"])
+            UC15(["Recuperar Senha"])
+        end
+    end
+
+    Admin --> UC1
+    Admin --> UC2
+    Admin --> UC3
+    Admin --> UC4
+    Admin --> UC5
+    Admin --> UC6
+    Admin --> UC7
+    Admin --> UC8
+    Admin --> UC9
+    Admin --> UC10
+    Admin --> UC11
+    Admin --> UC12
+    Admin --> UC13
+    Admin --> UC14
+    Admin --> UC15
+
+    UC2 -. include .-> UC2a
+    UC2 -. include .-> UC2b
+    UC5 -. include .-> UC5a
+    UC5 -. include .-> UC5b
+    UC5 -. include .-> UC5c
+    UC9 -. include .-> UC9a
+    UC10 -. extend .-> UC11
