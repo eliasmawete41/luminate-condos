@@ -1,0 +1,24 @@
+erDiagram
+    UTILIZADOR ||--|| PERFIL : "possui"
+    UTILIZADOR ||--o{ PAPEL : "tem"
+    UTILIZADOR ||--o{ NOTIFICACAO : "recebe"
+    UTILIZADOR ||--o{ AVALIACAO : "faz"
+    UTILIZADOR ||--o{ CONVERSA_SUPORTE : "abre"
+
+    BLOCO ||--o{ UNIDADE : "contem"
+    UNIDADE ||--o{ MORADOR : "aloja"
+    MORADOR ||--o{ HISTORICO_MORADOR : "gera"
+
+    POSTE ||--o| DISPOSITIVO_ESP32 : "equipado_com"
+    DISPOSITIVO_ESP32 ||--o{ LEITURA : "envia"
+    POSTE ||--o{ LEITURA : "registada_em"
+    POSTE ||--o{ MANUTENCAO : "sofre"
+    POSTE ||--o{ MANUTENCAO_PREVENTIVA : "agendada_para"
+
+    MANUTENCAO ||--o{ SUBSTITUICAO_COMPONENTE : "inclui"
+    UTILIZADOR ||--o{ MANUTENCAO : "reporta_ou_executa"
+
+    CONVERSA_SUPORTE ||--o{ MENSAGEM : "contem"
+    CONVERSA_SUPORTE ||--o| AVALIACAO : "avaliada_por"
+
+    CONFIGURACOES_CONDOMINIO ||--|| CONDOMINIO : "define"

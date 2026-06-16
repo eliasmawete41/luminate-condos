@@ -1,42 +1,22 @@
 ## Objetivo
-Criar um diagrama de caso de uso (use case diagram) em formato Mermaid representando todas as funcionalidades disponíveis ao papel de **administrador** no sistema PosteGuard, e salvá-lo como arquivo `.mmd` na pasta do projeto (sem integração na UI).
 
-## Funcionalidades a incluir (com base no codebase)
+Gerar dois diagramas da base de dados como artefactos de documentação (não integrados na UI), seguindo o mesmo padrão do diagrama de casos de uso já existente em `docs/`.
 
-O ator será **Administrador**.
+## Entregáveis
 
-Os casos de uso serão agrupados em subsistemas:
+1. **`docs/modelo-conceptual-bd.mmd`** — Modelo Conceptual (alto nível, orientado ao negócio)
+   - Diagrama Mermaid `erDiagram` com as entidades principais e seus relacionamentos, sem tipos de dados nem detalhes técnicos.
+   - Entidades: Utilizador, Perfil, Papel, Morador, Unidade, Bloco, Poste, Dispositivo ESP32, Leitura, Manutenção, Substituição de Componente, Manutenção Preventiva, Conversa de Suporte, Mensagem, Avaliação, Notificação, Histórico do Morador, Configurações do Condomínio.
+   - Relacionamentos com cardinalidade (1:1, 1:N, N:M) e verbos de negócio (ex.: "Morador reside em Unidade", "Poste possui Dispositivo", "Manutenção refere-se a Poste").
 
-### Monitoramento
-- Visualizar Dashboard (painel geral)
-- Gerenciar Postes (listar, editar status, excluir)
-- Visualizar Mapa (geolocalização dos postes)
-- Visualizar Histórico (ocorrências resolvidas)
+2. **`docs/modelo-logico-bd.mmd`** — Modelo Lógico (relacional, próximo da implementação)
+   - Diagrama Mermaid `erDiagram` com **todas as tabelas reais** do schema `public`:
+     `profiles`, `user_roles`, `blocks`, `units`, `residents`, `resident_history`, `poles`, `esp32_devices`, `device_readings`, `maintenances`, `component_replacements`, `preventive_schedules`, `support_conversations`, `support_messages`, `evaluations`, `notifications`, `condo_settings`.
+   - Cada tabela com colunas, tipos (uuid, text, timestamptz, numeric, boolean, jsonb, enum) e marcação PK/FK.
+   - Relacionamentos derivados das colunas `*_id` (ex.: `units.block_id → blocks.id`, `maintenances.pole_id → poles.id`, `support_messages.conversation_id → support_conversations.id`, etc.), com cardinalidades.
 
-### Manutenção
-- Gerenciar Ordens de Manutenção (criar, acompanhar, encerrar)
+## Notas
 
-### Usuários
-- Visualizar Usuários
-- Cadastrar Usuários
-- Alterar Perfil de Usuários
-
-### Dispositivos IoT
-- Gerenciar Dispositivos ESP32 (monitorar leituras, status)
-
-### Suporte e Comunicação
-- Visualizar Todas as Conversas de Suporte
-- Responder a Solicitações de Moradores
-- Visualizar Notificações
-
-### Sistema
-- Configurar Sistema / Perfil
-- Alterar Senha
-
-## Formato de entrega
-- Arquivo: `diagrama-caso-de-uso-admin.mmd`
-- Local: `/mnt/documents/` (para preview e download do usuário)
-- Também copiado para a raiz do projeto para persistência no repositório
-
-## Nota
-O diagrama não será integrado à aplicação React — é apenas um artefato de documentação na pasta do projeto...ário.
+- Ambos os ficheiros são apenas documentação Mermaid em `docs/`, sem alterações de código ou schema.
+- Conteúdo (rótulos, entidades, comentários) em português, conforme convenção do projeto.
+- Após criação, os diagramas serão também expostos via `<lov-artifact>` para visualização/download.
