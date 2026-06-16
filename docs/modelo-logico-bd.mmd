@@ -1,0 +1,206 @@
+erDiagram
+    profiles {
+        uuid id PK
+        text full_name
+        text email
+        text phone
+        text avatar_url
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    user_roles {
+        uuid id PK
+        uuid user_id FK
+        app_role role
+        timestamptz created_at
+    }
+    blocks {
+        uuid id PK
+        text name
+        text description
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    units {
+        uuid id PK
+        uuid block_id FK
+        text number
+        text floor
+        text description
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    residents {
+        uuid id PK
+        uuid user_id FK
+        uuid unit_id FK
+        resident_type resident_type
+        boolean is_primary
+        date move_in_date
+        date move_out_date
+        timestamptz created_at
+    }
+    resident_history {
+        uuid id PK
+        uuid unit_id FK
+        uuid user_id FK
+        text resident_name
+        resident_type resident_type
+        date move_in_date
+        date move_out_date
+        text notes
+        timestamptz created_at
+    }
+    poles {
+        uuid id PK
+        text code
+        text location_description
+        text location_type
+        numeric latitude
+        numeric longitude
+        lighting_type lighting_type
+        integer power_watts
+        date installation_date
+        pole_status status
+        text maintenance_company
+        integer lamp_lifespan_hours
+        integer current_lamp_hours
+        date last_lamp_change
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    esp32_devices {
+        uuid id PK
+        text device_token
+        text name
+        uuid pole_id FK
+        text status
+        uuid registered_by FK
+        uuid approved_by FK
+        timestamptz approved_at
+        timestamptz last_seen_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    device_readings {
+        uuid id PK
+        uuid device_id FK
+        uuid pole_id FK
+        boolean is_on
+        boolean fault_detected
+        text fault_type
+        numeric power_consumption_watts
+        numeric latitude
+        numeric longitude
+        jsonb raw_data
+        timestamptz created_at
+    }
+    maintenances {
+        uuid id PK
+        uuid pole_id FK
+        uuid reported_by FK
+        uuid assigned_to FK
+        failure_type failure_type
+        text description
+        priority priority
+        maintenance_status status
+        date scheduled_date
+        date completed_date
+        text resolution_notes
+        numeric cost
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    component_replacements {
+        uuid id PK
+        uuid maintenance_id FK
+        text component_name
+        integer quantity
+        numeric unit_cost
+        text notes
+        timestamptz created_at
+    }
+    preventive_schedules {
+        uuid id PK
+        uuid pole_id FK
+        text description
+        integer frequency_days
+        date last_executed
+        date next_scheduled
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    support_conversations {
+        uuid id PK
+        uuid user_id FK
+        text subject
+        text status
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    support_messages {
+        uuid id PK
+        uuid conversation_id FK
+        uuid sender_id FK
+        text content
+        text sender_type
+        boolean is_read
+        timestamptz created_at
+    }
+    evaluations {
+        uuid id PK
+        uuid user_id FK
+        text type
+        integer rating
+        text comment
+        uuid conversation_id FK
+        timestamptz created_at
+    }
+    notifications {
+        uuid id PK
+        uuid user_id FK
+        text title
+        text message
+        text type
+        boolean is_read
+        uuid related_pole_id FK
+        uuid related_maintenance_id FK
+        timestamptz created_at
+    }
+    condo_settings {
+        uuid id PK
+        text support_phone
+        text support_email
+        text condo_name
+        timestamptz updated_at
+    }
+
+    profiles ||--o{ user_roles : "user_id"
+    profiles ||--o{ residents : "user_id"
+    profiles ||--o{ resident_history : "user_id"
+    profiles ||--o{ maintenances : "reported_by"
+    profiles ||--o{ maintenances : "assigned_to"
+    profiles ||--o{ esp32_devices : "registered_by"
+    profiles ||--o{ esp32_devices : "approved_by"
+    profiles ||--o{ support_conversations : "user_id"
+    profiles ||--o{ support_messages : "sender_id"
+    profiles ||--o{ evaluations : "user_id"
+    profiles ||--o{ notifications : "user_id"
+
+    blocks ||--o{ units : "block_id"
+    units ||--o{ residents : "unit_id"
+    units ||--o{ resident_history : "unit_id"
+
+    poles ||--o| esp32_devices : "pole_id"
+    poles ||--o{ device_readings : "pole_id"
+    esp32_devices ||--o{ device_readings : "device_id"
+    poles ||--o{ maintenances : "pole_id"
+    poles ||--o{ preventive_schedules : "pole_id"
+    poles ||--o{ notifications : "related_pole_id"
+
+    maintenances ||--o{ component_replacements : "maintenance_id"
+    maintenances ||--o{ notifications : "related_maintenance_id"
+
+    support_conversations ||--o{ support_messages : "conversation_id"
+    support_conversations ||--o| evaluations : "conversation_id"
