@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
 };
 
 function json(body: unknown, status = 200) {
@@ -19,15 +19,24 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  if (req.method === "GET") {
+    return json({ ok: true, hint: "Envie POST com JSON do ESP32" });
+  }
+
   if (req.method !== "POST") {
     return json({ error: "Método não permitido. Use POST." }, 405);
   }
 
+  // ESP32 muitas vezes envia sem Content-Type correcto. Ler como texto e parsear manualmente.
+  const raw = await req.text();
+  console.log("[dispositivos] body recebido:", raw);
+
   let payload: any;
   try {
-    payload = await req.json();
-  } catch {
-    return json({ error: "JSON inválido" }, 400);
+    payload = raw && raw.trim().length > 0 ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.error("[dispositivos] JSON inválido:", e, "raw=", raw);
+    return json({ error: "JSON inválido", raw }, 400);
   }
 
   // Validação simples e tolerante (aceita números como string)
@@ -47,6 +56,7 @@ Deno.serve(async (req) => {
     corrente_poste_estragado: num(payload.corrente_poste_estragado),
     potencia_poste_estragado: num(payload.potencia_poste_estragado),
   };
+  console.log("[dispositivos] leitura normalizada:", leitura);
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -64,5 +74,6 @@ Deno.serve(async (req) => {
     return json({ error: error.message }, 500);
   }
 
-  return json({ ok: true, id: data.id });
+  console.log("[dispositivos] inserido id=", data.id);
+  return json({ ok: true, id: data.id, leitura });
 });

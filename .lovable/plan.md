@@ -1,73 +1,34 @@
-## Objetivo
+## Plano para resolver o problema do ESP32
 
-Criar um webhook público no Lovable Cloud que recebe POST do ESP32 em `/dispositivos`, guarda o histórico em tabela própria e mostra os valores em tempo real no dashboard.
+1. **Corrigir o endpoint `/dispositivos`**
+   - Reescrever a função para aceitar também o caso comum em ESP32 em que o corpo chega como texto cru, com cabeçalhos incompletos ou sem `Content-Type: application/json`.
+   - Extrair somente os campos reais enviados pelo chip:
+     - `ldr`
+     - `poste_bom_status`
+     - `corrente_poste_bom`
+     - `potencia_poste_bom`
+     - `poste_estragado_status`
+     - `corrente_poste_estragado`
+     - `potencia_poste_estragado`
+   - Remover qualquer fallback que possa mascarar dados ausentes como `0`/`DESLIGADO` sem avisar.
+   - Retornar erro claro quando o JSON vier inválido ou sem os campos obrigatórios.
 
-## 1. Base de dados
+2. **Garantir que a função publicada é a versão certa**
+   - Depois de alterar o código, publicar novamente a Edge Function `dispositivos`.
+   - Testar o endpoint com um POST realista e confirmar que a linha aparece na tabela `esp32_leituras`.
 
-Nova tabela `esp32_leituras` (histórico append-only, uma linha por POST):
+3. **Fortalecer o painel `/monitor-esp32`**
+   - Manter Realtime para novos registos.
+   - Manter polling de 5 segundos como reserva.
+   - Mostrar erro visível no painel quando a busca falhar, em vez de parecer que “não chegou nada”.
+   - Evitar que o estado “Tempo real ligado” esconda uma tabela vazia quando o problema estiver no webhook.
 
-| Coluna | Tipo | Notas |
-|---|---|---|
-| `id` | uuid PK | default `gen_random_uuid()` |
-| `ldr` | integer | |
-| `poste_bom_status` | text | "LIGADO"/"DESLIGADO" |
-| `corrente_poste_bom` | numeric | |
-| `potencia_poste_bom` | numeric | |
-| `poste_estragado_status` | text | |
-| `corrente_poste_estragado` | numeric | |
-| `potencia_poste_estragado` | numeric | |
-| `created_at` | timestamptz default now() | |
+4. **Limpar leituras de teste se necessário**
+   - Depois de validar o endpoint com uma leitura controlada, remover apenas os registos de teste criados durante a validação, mantendo o histórico limpo para o ESP32 real.
 
-RLS:
-- `SELECT` permitido a `authenticated` (todos os utilizadores logados podem ver o monitoramento).
-- `INSERT` apenas via `service_role` (a edge function escreve com service key; o ESP32 não fala diretamente com o Postgres).
-- GRANTs: `SELECT` a authenticated, `ALL` a service_role.
+## Detalhes técnicos
 
-Adicionar a tabela à publicação `supabase_realtime` para atualização ao vivo.
-
-## 2. Edge Function `dispositivos`
-
-Endpoint público (sem JWT) em `supabase/functions/dispositivos/index.ts`.
-
-- Aceita `POST` com JSON exatamente na estrutura enviada pelo ESP32.
-- Valida o body com Zod (campos e tipos esperados).
-- Insere uma nova linha em `esp32_leituras` usando o `SUPABASE_SERVICE_ROLE_KEY`.
-- Responde 200 `{ ok: true, id }` em sucesso, 400 em payload inválido, 500 em erro de DB.
-- CORS habilitado (`OPTIONS` + headers em todas as respostas).
-- Override em `supabase/config.toml` para `verify_jwt = false` nesta função.
-
-URL final que o ESP32 deve usar: `https://<project>.functions.supabase.co/dispositivos` (mostrada ao utilizador após deploy).
-
-## 3. Interface — Monitoramento em tempo real
-
-Nova página `src/pages/MonitorDispositivos.tsx` (rota `/monitor-dispositivos`) ligada no menu lateral.
-
-Layout:
-- **Cards de estado atual** (última leitura):
-  - LDR (luminosidade)
-  - Poste Bom: estado (badge verde/cinza), corrente (A), potência (W)
-  - Poste Estragado: estado, corrente, potência
-- **Tabela de histórico** das últimas 50 leituras, com data/hora.
-
-Dados:
-- Hook `useLeiturasEsp32` que faz `select` inicial das últimas 50 linhas ordenadas por `created_at desc`.
-- Subscrição Realtime ao canal `esp32_leituras` (evento `INSERT`) dentro de `useEffect`, com `removeChannel` no cleanup, para atualizar cards + prepend na tabela.
-
-## 4. Detalhes técnicos
-
-- Migração SQL única: CREATE TABLE → GRANT → ENABLE RLS → POLICIES → ALTER PUBLICATION.
-- Edge function usa `createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)` (já existem como secrets).
-- Toda a UI e código em português, seguindo o tema visual existente (gradientes sunset, dark bg).
-- Sem dados mock — só a leitura real da tabela.
-
-## Ficheiros
-
-Criar:
-- `supabase/functions/dispositivos/index.ts`
-- `src/pages/MonitorDispositivos.tsx`
-- `src/hooks/useLeiturasEsp32.ts`
-
-Editar:
-- `supabase/config.toml` (bloco da função com `verify_jwt = false`)
-- `src/App.tsx` (rota)
-- Sidebar/menu para incluir o item "Monitoramento ESP32"
+- A base de dados está saudável e a tabela `esp32_leituras` existe.
+- A tabela está vazia neste momento, por isso o painel não tem nada para mostrar.
+- Não há logs recentes da função `dispositivos`, o que indica que o ESP32 provavelmente não está a atingir a função publicada correta, ou a chamada está a falhar antes de inserir.
+- A correção principal será tornar o endpoint mais compatível com requests de ESP32 e validar/deployar a função publicada.
