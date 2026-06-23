@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
 import type { Database } from '@/integrations/supabase/types';
+import { useLeiturasEsp32 } from '@/hooks/useLeiturasEsp32';
 
 type Poste = Database['public']['Tables']['poles']['Row'];
 type PosteInsercao = Database['public']['Tables']['poles']['Insert'];
@@ -46,6 +47,7 @@ const tiposIluminacao: Record<string, string> = {
 export default function Postes() {
   const { toast } = useToast();
   const { isManutencao, isAdmin } = useAuth();
+  const { ultima, estadoTempoReal, ultimaActualizacao } = useLeiturasEsp32(1);
   const [postes, setPostes] = useState<Poste[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [termoBusca, setTermoBusca] = useState('');
