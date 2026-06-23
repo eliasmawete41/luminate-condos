@@ -214,6 +214,7 @@ export type Database = {
           created_at: string
           id: string
           ldr: number
+          payload: Json | null
           poste_bom_status: string
           poste_estragado_status: string
           potencia_poste_bom: number
@@ -225,6 +226,7 @@ export type Database = {
           created_at?: string
           id?: string
           ldr?: number
+          payload?: Json | null
           poste_bom_status?: string
           poste_estragado_status?: string
           potencia_poste_bom?: number
@@ -236,6 +238,7 @@ export type Database = {
           created_at?: string
           id?: string
           ldr?: number
+          payload?: Json | null
           poste_bom_status?: string
           poste_estragado_status?: string
           potencia_poste_bom?: number

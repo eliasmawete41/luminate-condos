@@ -11,6 +11,7 @@ export interface LeituraEsp32 {
   corrente_poste_estragado: number;
   potencia_poste_estragado: number;
   created_at: string;
+  payload: Record<string, unknown> | null;
 }
 
 type EstadoTempoReal = 'a_ligar' | 'ligado' | 'erro';
@@ -28,6 +29,9 @@ function normalizarLeitura(valor: unknown): LeituraEsp32 {
     corrente_poste_estragado: Number(leitura.corrente_poste_estragado ?? 0),
     potencia_poste_estragado: Number(leitura.potencia_poste_estragado ?? 0),
     created_at: String(leitura.created_at ?? new Date().toISOString()),
+    payload: (leitura.payload && typeof leitura.payload === 'object')
+      ? (leitura.payload as Record<string, unknown>)
+      : null,
   };
 }
 

@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
     poste_estragado_status: str(payload.poste_estragado_status),
     corrente_poste_estragado: num(payload.corrente_poste_estragado),
     potencia_poste_estragado: num(payload.potencia_poste_estragado),
+    payload: payload && typeof payload === "object" ? payload : { valor: payload },
   };
   console.log("[dispositivos] leitura normalizada:", leitura);
 
