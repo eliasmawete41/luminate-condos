@@ -23,6 +23,7 @@ import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, Legend
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { useLeiturasEsp32 } from '@/hooks/useLeiturasEsp32';
 
 // Interface de dispositivo
 interface Dispositivo {
@@ -289,6 +290,9 @@ export default function Dispositivos() {
   const contagemFalhas = dispositivosAprovados.filter(d => d.ultimaLeitura?.fault_detected).length;
   const totalWatts = dispositivosAprovados.reduce((soma, d) => soma + (d.ultimaLeitura?.power_consumption_watts ?? 0), 0);
 
+  // Leituras em tempo real vindas do webhook /dispositivos (tabela esp32_leituras)
+  const { leituras: leiturasWebhook, ultima: ultimaWebhook, carregando: carregandoWebhook } = useLeiturasEsp32(20);
+
   if (!isAdmin) {
     return (
       <div className="p-6">
@@ -367,6 +371,110 @@ export default function Dispositivos() {
 
         {/* ===== ABA: MONITORAMENTO ===== */}
         <TabsContent value="monitor" className="space-y-6">
+
+          {/* ===== Webhook ESP32 (tempo real) ===== */}
+          <Card className="border-primary/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Zap className="h-5 w-5 text-primary" />
+                Webhook ESP32 — Tempo Real
+                <span className="ml-2 flex items-center gap-1 text-xs font-normal text-primary">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                  </span>
+                  ao vivo
+                </span>
+              </CardTitle>
+              <CardDescription>
+                Dados recebidos no endpoint <code className="text-xs">POST /dispositivos</code>
+                {ultimaWebhook && (
+                  <> · última: {format(new Date(ultimaWebhook.created_at), "HH:mm:ss · dd/MM", { locale: ptBR })}</>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {carregandoWebhook ? (
+                <p className="text-center text-muted-foreground py-6 text-sm">A carregar…</p>
+              ) : !ultimaWebhook ? (
+                <p className="text-center text-muted-foreground py-6 text-sm">
+                  Nenhuma leitura recebida ainda. Envie um POST para <code>/dispositivos</code>.
+                </p>
+              ) : (
+                <>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="p-4 rounded-xl border bg-accent/30">
+                      <p className="text-xs text-muted-foreground mb-1">LDR (luminosidade)</p>
+                      <p className="text-3xl font-bold">{ultimaWebhook.ldr}</p>
+                    </div>
+                    <div className={cn(
+                      "p-4 rounded-xl border",
+                      ultimaWebhook.poste_bom_status === 'LIGADO' ? "border-primary/40 bg-primary/5" : "bg-muted/30"
+                    )}>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs text-muted-foreground">Poste Bom</p>
+                        <Badge variant={ultimaWebhook.poste_bom_status === 'LIGADO' ? 'default' : 'secondary'} className="text-xs">
+                          {ultimaWebhook.poste_bom_status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm"><span className="text-muted-foreground">Corrente:</span> <strong>{Number(ultimaWebhook.corrente_poste_bom).toFixed(2)} A</strong></p>
+                      <p className="text-sm"><span className="text-muted-foreground">Potência:</span> <strong>{Number(ultimaWebhook.potencia_poste_bom).toFixed(2)} W</strong></p>
+                    </div>
+                    <div className={cn(
+                      "p-4 rounded-xl border",
+                      ultimaWebhook.poste_estragado_status === 'LIGADO' ? "border-destructive/40 bg-destructive/5" : "bg-muted/30"
+                    )}>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs text-muted-foreground">Poste Estragado</p>
+                        <Badge variant={ultimaWebhook.poste_estragado_status === 'LIGADO' ? 'destructive' : 'secondary'} className="text-xs">
+                          {ultimaWebhook.poste_estragado_status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm"><span className="text-muted-foreground">Corrente:</span> <strong>{Number(ultimaWebhook.corrente_poste_estragado).toFixed(2)} A</strong></p>
+                      <p className="text-sm"><span className="text-muted-foreground">Potência:</span> <strong>{Number(ultimaWebhook.potencia_poste_estragado).toFixed(2)} W</strong></p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-auto max-h-72 border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Horário</TableHead>
+                          <TableHead>LDR</TableHead>
+                          <TableHead>Bom</TableHead>
+                          <TableHead>I Bom (A)</TableHead>
+                          <TableHead>P Bom (W)</TableHead>
+                          <TableHead>Estragado</TableHead>
+                          <TableHead>I Estr. (A)</TableHead>
+                          <TableHead>P Estr. (W)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {leiturasWebhook.map(l => (
+                          <TableRow key={l.id}>
+                            <TableCell className="text-xs font-mono text-muted-foreground">
+                              {format(new Date(l.created_at), "HH:mm:ss", { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="text-sm">{l.ldr}</TableCell>
+                            <TableCell>
+                              <Badge variant={l.poste_bom_status === 'LIGADO' ? 'default' : 'secondary'} className="text-xs">{l.poste_bom_status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">{Number(l.corrente_poste_bom).toFixed(2)}</TableCell>
+                            <TableCell className="text-sm">{Number(l.potencia_poste_bom).toFixed(2)}</TableCell>
+                            <TableCell>
+                              <Badge variant={l.poste_estragado_status === 'LIGADO' ? 'destructive' : 'secondary'} className="text-xs">{l.poste_estragado_status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">{Number(l.corrente_poste_estragado).toFixed(2)}</TableCell>
+                            <TableCell className="text-sm">{Number(l.potencia_poste_estragado).toFixed(2)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Cartões KPI */}
           <div className="grid gap-4 md:grid-cols-4">
