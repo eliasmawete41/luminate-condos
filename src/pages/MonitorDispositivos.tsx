@@ -19,6 +19,14 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function formatarValor(valor: unknown): string {
+  if (valor === null || valor === undefined) return '—';
+  if (typeof valor === 'number') return Number.isInteger(valor) ? String(valor) : valor.toFixed(2);
+  if (typeof valor === 'boolean') return valor ? 'true' : 'false';
+  if (typeof valor === 'object') return JSON.stringify(valor);
+  return String(valor);
+}
+
 export default function MonitorDispositivos() {
   const { leituras, carregando, ultima, estadoTempoReal, ultimaActualizacao } = useLeiturasEsp32(50);
   const textoTempoReal = estadoTempoReal === 'ligado'
@@ -26,6 +34,8 @@ export default function MonitorDispositivos() {
     : estadoTempoReal === 'erro'
       ? 'Tempo real indisponível; a sincronizar automaticamente'
       : 'A ligar tempo real';
+
+  const entradasPayload = ultima?.payload ? Object.entries(ultima.payload) : [];
 
   return (
     <div className="space-y-6">
@@ -93,6 +103,38 @@ export default function MonitorDispositivos() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Todos os valores do JSON recebido */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Radio className="h-5 w-5 text-primary" />
+            Todos os valores recebidos (JSON do ESP32)
+          </CardTitle>
+          <CardDescription>
+            Cada chave enviada pelo dispositivo é apresentada abaixo em tempo real, sem exceção.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {entradasPayload.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              Ainda não foi recebido nenhum JSON do ESP32.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {entradasPayload.map(([chave, valor]) => (
+                <div
+                  key={chave}
+                  className="rounded-lg border bg-card p-3 space-y-1"
+                >
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{chave}</p>
+                  <p className="text-lg font-semibold break-all">{formatarValor(valor)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Histórico */}
       <Card>
