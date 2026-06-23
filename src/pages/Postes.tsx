@@ -195,8 +195,53 @@ export default function Postes() {
     setDialogEdicaoAberto(true);
   };
 
+  // Postes virtuais provenientes do ESP32 (sempre contados e listados)
+  const postesEsp32: Poste[] = [
+    {
+      id: 'esp32-bom',
+      code: 'ESP-BOM',
+      location_description: 'Poste Bom (ESP32)',
+      lighting_type: 'led' as any,
+      power_watts: ultima ? Math.round(Number(ultima.potencia_poste_bom)) : 0,
+      status: (ultima && String(ultima.poste_bom_status).toUpperCase() === 'LIGADO'
+        ? 'funcionando'
+        : ultima ? 'com_falha' : 'desativado') as any,
+      installation_date: null,
+      lamp_lifespan_hours: anosParaHoras(3),
+      current_lamp_hours: 0,
+      maintenance_company: 'ESP32',
+      latitude: null,
+      longitude: null,
+      block_id: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as unknown as Poste,
+    {
+      id: 'esp32-est',
+      code: 'ESP-EST',
+      location_description: 'Poste Estragado (ESP32)',
+      lighting_type: 'led' as any,
+      power_watts: ultima ? Math.round(Number(ultima.potencia_poste_estragado)) : 0,
+      status: (ultima && String(ultima.poste_estragado_status).toUpperCase() === 'LIGADO'
+        ? 'funcionando'
+        : ultima ? 'com_falha' : 'desativado') as any,
+      installation_date: null,
+      lamp_lifespan_hours: anosParaHoras(3),
+      current_lamp_hours: 0,
+      maintenance_company: 'ESP32',
+      latitude: null,
+      longitude: null,
+      block_id: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as unknown as Poste,
+  ];
+
+  // Combinar postes da base com os virtuais do ESP32
+  const postesCombinados = [...postesEsp32, ...postes];
+
   // Filtrar postes
-  const postesFiltrados = postes.filter(poste => {
+  const postesFiltrados = postesCombinados.filter(poste => {
     const correspondeABusca = poste.code.toLowerCase().includes(termoBusca.toLowerCase()) || poste.location_description.toLowerCase().includes(termoBusca.toLowerCase());
     const correspondeAoStatus = filtroStatus === 'all' || poste.status === filtroStatus;
     return correspondeABusca && correspondeAoStatus;
