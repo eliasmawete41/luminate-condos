@@ -25,6 +25,7 @@ const adminMenuItems = [
 const adminManagementItems = [
   { title: 'Usuários', url: '/usuarios', icon: Users },
   { title: 'Dispositivos', url: '/dispositivos', icon: Cpu },
+  { title: 'Monitor ESP32', url: '/monitor-esp32', icon: Zap },
 ];
 
 const adminUtilityItems = [

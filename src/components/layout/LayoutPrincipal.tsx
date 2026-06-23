@@ -27,7 +27,7 @@ export function AppLayout() {
   const ehTecnico = roles.includes('manutencao') && !isAdmin;
   const ehConsumidor = !isAdmin && !ehTecnico && (roles.includes('morador') || roles.length === 0);
 
-  const rotasSomenteAdmin = ['/dashboard', '/postes', '/manutencoes', '/unidades', '/usuarios', '/dispositivos', '/notificacoes', '/configuracoes', '/mapa'];
+  const rotasSomenteAdmin = ['/dashboard', '/postes', '/manutencoes', '/unidades', '/usuarios', '/dispositivos', '/monitor-esp32', '/notificacoes', '/configuracoes', '/mapa'];
   const rotasSomenteConsumidor = ['/inicio', '/avaliacoes'];
   const rotasTecnico = ['/tecnico'];
 

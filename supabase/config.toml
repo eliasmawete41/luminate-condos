@@ -2,3 +2,6 @@ project_id = "vvmdihrcxnndohlrlrod"
 
 [functions.esp32-report]
 verify_jwt = false
+
+[functions.dispositivos]
+verify_jwt = false

@@ -20,6 +20,7 @@ import Users from "./pages/Usuarios";
 import Notifications from "./pages/Notificacoes";
 import Settings from "./pages/Configuracoes";
 import Devices from "./pages/Dispositivos";
+import MonitorDispositivos from "./pages/MonitorDispositivos";
 import Support from "./pages/Suporte";
 import Evaluations from "./pages/Avaliacoes";
 import MapPage from "./pages/Mapa";
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/notificacoes" element={<Notifications />} />
               <Route path="/configuracoes" element={<Settings />} />
               <Route path="/dispositivos" element={<Devices />} />
+              <Route path="/monitor-esp32" element={<MonitorDispositivos />} />
               <Route path="/mapa" element={<MapPage />} />
               
               {/* Rotas do técnico de manutenção */}

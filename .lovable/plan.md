@@ -1,22 +1,73 @@
 ## Objetivo
 
-Gerar dois diagramas da base de dados como artefactos de documentação (não integrados na UI), seguindo o mesmo padrão do diagrama de casos de uso já existente em `docs/`.
+Criar um webhook público no Lovable Cloud que recebe POST do ESP32 em `/dispositivos`, guarda o histórico em tabela própria e mostra os valores em tempo real no dashboard.
 
-## Entregáveis
+## 1. Base de dados
 
-1. **`docs/modelo-conceptual-bd.mmd`** — Modelo Conceptual (alto nível, orientado ao negócio)
-   - Diagrama Mermaid `erDiagram` com as entidades principais e seus relacionamentos, sem tipos de dados nem detalhes técnicos.
-   - Entidades: Utilizador, Perfil, Papel, Morador, Unidade, Bloco, Poste, Dispositivo ESP32, Leitura, Manutenção, Substituição de Componente, Manutenção Preventiva, Conversa de Suporte, Mensagem, Avaliação, Notificação, Histórico do Morador, Configurações do Condomínio.
-   - Relacionamentos com cardinalidade (1:1, 1:N, N:M) e verbos de negócio (ex.: "Morador reside em Unidade", "Poste possui Dispositivo", "Manutenção refere-se a Poste").
+Nova tabela `esp32_leituras` (histórico append-only, uma linha por POST):
 
-2. **`docs/modelo-logico-bd.mmd`** — Modelo Lógico (relacional, próximo da implementação)
-   - Diagrama Mermaid `erDiagram` com **todas as tabelas reais** do schema `public`:
-     `profiles`, `user_roles`, `blocks`, `units`, `residents`, `resident_history`, `poles`, `esp32_devices`, `device_readings`, `maintenances`, `component_replacements`, `preventive_schedules`, `support_conversations`, `support_messages`, `evaluations`, `notifications`, `condo_settings`.
-   - Cada tabela com colunas, tipos (uuid, text, timestamptz, numeric, boolean, jsonb, enum) e marcação PK/FK.
-   - Relacionamentos derivados das colunas `*_id` (ex.: `units.block_id → blocks.id`, `maintenances.pole_id → poles.id`, `support_messages.conversation_id → support_conversations.id`, etc.), com cardinalidades.
+| Coluna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid PK | default `gen_random_uuid()` |
+| `ldr` | integer | |
+| `poste_bom_status` | text | "LIGADO"/"DESLIGADO" |
+| `corrente_poste_bom` | numeric | |
+| `potencia_poste_bom` | numeric | |
+| `poste_estragado_status` | text | |
+| `corrente_poste_estragado` | numeric | |
+| `potencia_poste_estragado` | numeric | |
+| `created_at` | timestamptz default now() | |
 
-## Notas
+RLS:
+- `SELECT` permitido a `authenticated` (todos os utilizadores logados podem ver o monitoramento).
+- `INSERT` apenas via `service_role` (a edge function escreve com service key; o ESP32 não fala diretamente com o Postgres).
+- GRANTs: `SELECT` a authenticated, `ALL` a service_role.
 
-- Ambos os ficheiros são apenas documentação Mermaid em `docs/`, sem alterações de código ou schema.
-- Conteúdo (rótulos, entidades, comentários) em português, conforme convenção do projeto.
-- Após criação, os diagramas serão também expostos via `<lov-artifact>` para visualização/download.
+Adicionar a tabela à publicação `supabase_realtime` para atualização ao vivo.
+
+## 2. Edge Function `dispositivos`
+
+Endpoint público (sem JWT) em `supabase/functions/dispositivos/index.ts`.
+
+- Aceita `POST` com JSON exatamente na estrutura enviada pelo ESP32.
+- Valida o body com Zod (campos e tipos esperados).
+- Insere uma nova linha em `esp32_leituras` usando o `SUPABASE_SERVICE_ROLE_KEY`.
+- Responde 200 `{ ok: true, id }` em sucesso, 400 em payload inválido, 500 em erro de DB.
+- CORS habilitado (`OPTIONS` + headers em todas as respostas).
+- Override em `supabase/config.toml` para `verify_jwt = false` nesta função.
+
+URL final que o ESP32 deve usar: `https://<project>.functions.supabase.co/dispositivos` (mostrada ao utilizador após deploy).
+
+## 3. Interface — Monitoramento em tempo real
+
+Nova página `src/pages/MonitorDispositivos.tsx` (rota `/monitor-dispositivos`) ligada no menu lateral.
+
+Layout:
+- **Cards de estado atual** (última leitura):
+  - LDR (luminosidade)
+  - Poste Bom: estado (badge verde/cinza), corrente (A), potência (W)
+  - Poste Estragado: estado, corrente, potência
+- **Tabela de histórico** das últimas 50 leituras, com data/hora.
+
+Dados:
+- Hook `useLeiturasEsp32` que faz `select` inicial das últimas 50 linhas ordenadas por `created_at desc`.
+- Subscrição Realtime ao canal `esp32_leituras` (evento `INSERT`) dentro de `useEffect`, com `removeChannel` no cleanup, para atualizar cards + prepend na tabela.
+
+## 4. Detalhes técnicos
+
+- Migração SQL única: CREATE TABLE → GRANT → ENABLE RLS → POLICIES → ALTER PUBLICATION.
+- Edge function usa `createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)` (já existem como secrets).
+- Toda a UI e código em português, seguindo o tema visual existente (gradientes sunset, dark bg).
+- Sem dados mock — só a leitura real da tabela.
+
+## Ficheiros
+
+Criar:
+- `supabase/functions/dispositivos/index.ts`
+- `src/pages/MonitorDispositivos.tsx`
+- `src/hooks/useLeiturasEsp32.ts`
+
+Editar:
+- `supabase/config.toml` (bloco da função com `verify_jwt = false`)
+- `src/App.tsx` (rota)
+- Sidebar/menu para incluir o item "Monitoramento ESP32"
