@@ -20,7 +20,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function MonitorDispositivos() {
-  const { leituras, carregando, ultima, estadoTempoReal } = useLeiturasEsp32(50);
+  const { leituras, carregando, ultima, estadoTempoReal, ultimaActualizacao } = useLeiturasEsp32(50);
   const textoTempoReal = estadoTempoReal === 'ligado'
     ? 'Tempo real ligado'
     : estadoTempoReal === 'erro'
@@ -34,7 +34,10 @@ export default function MonitorDispositivos() {
         <p className="text-muted-foreground">
           Leituras recebidas em tempo real via webhook <code>/dispositivos</code>.
         </p>
-        <p className="text-xs text-muted-foreground">{textoTempoReal}</p>
+        <p className="text-xs text-muted-foreground">
+          {textoTempoReal} · Actualização automática a cada 5s
+          {ultimaActualizacao && ` · Última: ${format(ultimaActualizacao, 'HH:mm:ss', { locale: ptBR })}`}
+        </p>
       </header>
 
       {/* Cards estado actual */}
