@@ -1,0 +1,1 @@
+ALTER TABLE public.esp32_leituras ADD COLUMN IF NOT EXISTS payload jsonb;
