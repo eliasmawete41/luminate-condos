@@ -20,7 +20,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function MonitorDispositivos() {
-  const { leituras, carregando, ultima, estadoTempoReal } = useLeiturasEsp32(50);
+  const { leituras, carregando, ultima, estadoTempoReal, ultimaActualizacao } = useLeiturasEsp32(50);
   const textoTempoReal = estadoTempoReal === 'ligado'
     ? 'Tempo real ligado'
     : estadoTempoReal === 'erro'
@@ -34,7 +34,10 @@ export default function MonitorDispositivos() {
         <p className="text-muted-foreground">
           Leituras recebidas em tempo real via webhook <code>/dispositivos</code>.
         </p>
-        <p className="text-xs text-muted-foreground">{textoTempoReal}</p>
+        <p className="text-xs text-muted-foreground">
+          {textoTempoReal} · Actualização automática a cada 5s
+          {ultimaActualizacao && ` · Última: ${format(ultimaActualizacao, 'HH:mm:ss', { locale: ptBR })}`}
+        </p>
       </header>
 
       {/* Cards estado actual */}
@@ -60,11 +63,11 @@ export default function MonitorDispositivos() {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <p className="text-muted-foreground">Corrente</p>
-                <p className="font-semibold">{ultima ? `${Number(ultima.corrente_poste_bom).toFixed(2)} A` : '—'}</p>
+                <p className="font-semibold">{ultima ? `${Number(ultima.corrente_poste_bom).toFixed(2)} mA` : '—'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Potência</p>
-                <p className="font-semibold">{ultima ? `${Number(ultima.potencia_poste_bom).toFixed(2)} W` : '—'}</p>
+                <p className="font-semibold">{ultima ? `${Number(ultima.potencia_poste_bom).toFixed(2)} mW` : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -80,11 +83,11 @@ export default function MonitorDispositivos() {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <p className="text-muted-foreground">Corrente</p>
-                <p className="font-semibold">{ultima ? `${Number(ultima.corrente_poste_estragado).toFixed(2)} A` : '—'}</p>
+                <p className="font-semibold">{ultima ? `${Number(ultima.corrente_poste_estragado).toFixed(2)} mA` : '—'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Potência</p>
-                <p className="font-semibold">{ultima ? `${Number(ultima.potencia_poste_estragado).toFixed(2)} W` : '—'}</p>
+                <p className="font-semibold">{ultima ? `${Number(ultima.potencia_poste_estragado).toFixed(2)} mW` : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -120,11 +123,11 @@ export default function MonitorDispositivos() {
                     <TableHead>Data/Hora</TableHead>
                     <TableHead>LDR</TableHead>
                     <TableHead>Poste Bom</TableHead>
-                    <TableHead>Corrente B (A)</TableHead>
-                    <TableHead>Potência B (W)</TableHead>
+                    <TableHead>Corrente B (mA)</TableHead>
+                    <TableHead>Potência B (mW)</TableHead>
                     <TableHead>Poste Estragado</TableHead>
-                    <TableHead>Corrente E (A)</TableHead>
-                    <TableHead>Potência E (W)</TableHead>
+                    <TableHead>Corrente E (mA)</TableHead>
+                    <TableHead>Potência E (mW)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

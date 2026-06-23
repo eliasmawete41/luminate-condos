@@ -39,6 +39,7 @@ export function useLeiturasEsp32(limite = 50) {
   const [leituras, setLeituras] = useState<LeituraEsp32[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [estadoTempoReal, setEstadoTempoReal] = useState<EstadoTempoReal>('a_ligar');
+  const [ultimaActualizacao, setUltimaActualizacao] = useState<Date | null>(null);
   const nomeCanal = useMemo(
     () => `esp32_leituras_tempo_real_${Math.random().toString(36).slice(2)}`,
     [],
@@ -58,6 +59,7 @@ export function useLeiturasEsp32(limite = 50) {
       if (!activo) return;
       if (!error && data) {
         setLeituras(data.map(normalizarLeitura));
+        setUltimaActualizacao(new Date());
       }
       setCarregando(false);
     }
@@ -76,6 +78,7 @@ export function useLeiturasEsp32(limite = 50) {
             const semDuplicados = anteriores.filter((leitura) => leitura.id !== nova.id);
             return [nova, ...semDuplicados].sort(ordenarPorDataDesc).slice(0, limite);
           });
+          setUltimaActualizacao(new Date());
         },
       )
       .subscribe((estado) => {
@@ -103,5 +106,5 @@ export function useLeiturasEsp32(limite = 50) {
     };
   }, [limite, nomeCanal]);
 
-  return { leituras, carregando, ultima: leituras[0] ?? null, estadoTempoReal };
+  return { leituras, carregando, ultima: leituras[0] ?? null, estadoTempoReal, ultimaActualizacao };
 }
