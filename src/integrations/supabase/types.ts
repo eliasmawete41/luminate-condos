@@ -207,6 +207,42 @@ export type Database = {
           },
         ]
       }
+      esp32_leituras: {
+        Row: {
+          corrente_poste_bom: number
+          corrente_poste_estragado: number
+          created_at: string
+          id: string
+          ldr: number
+          poste_bom_status: string
+          poste_estragado_status: string
+          potencia_poste_bom: number
+          potencia_poste_estragado: number
+        }
+        Insert: {
+          corrente_poste_bom?: number
+          corrente_poste_estragado?: number
+          created_at?: string
+          id?: string
+          ldr?: number
+          poste_bom_status?: string
+          poste_estragado_status?: string
+          potencia_poste_bom?: number
+          potencia_poste_estragado?: number
+        }
+        Update: {
+          corrente_poste_bom?: number
+          corrente_poste_estragado?: number
+          created_at?: string
+          id?: string
+          ldr?: number
+          poste_bom_status?: string
+          poste_estragado_status?: string
+          potencia_poste_bom?: number
+          potencia_poste_estragado?: number
+        }
+        Relationships: []
+      }
       evaluations: {
         Row: {
           comment: string | null
