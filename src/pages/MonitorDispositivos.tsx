@@ -35,7 +35,7 @@ export default function MonitorDispositivos() {
           Leituras recebidas em tempo real via webhook <code>/dispositivos</code>.
         </p>
         <p className="text-xs text-muted-foreground">
-          {textoTempoReal} · Actualização automática a cada 5s
+          {textoTempoReal} · Actualização imediata
           {ultimaActualizacao && ` · Última: ${format(ultimaActualizacao, 'HH:mm:ss', { locale: ptBR })}`}
         </p>
       </header>

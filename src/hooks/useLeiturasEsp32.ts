@@ -95,13 +95,8 @@ export function useLeiturasEsp32(limite = 50) {
         }
       });
 
-    const actualizacaoReserva = window.setInterval(() => {
-      carregar();
-    }, 5000);
-
     return () => {
       activo = false;
-      window.clearInterval(actualizacaoReserva);
       supabase.removeChannel(canal);
     };
   }, [limite, nomeCanal]);
