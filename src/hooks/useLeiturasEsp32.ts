@@ -46,6 +46,7 @@ export function useLeiturasEsp32(limite = 50) {
 
   useEffect(() => {
     let activo = true;
+    setEstadoTempoReal('a_ligar');
 
     async function carregar() {
       const { data, error } = await supabase
