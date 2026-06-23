@@ -291,7 +291,17 @@ export default function Dispositivos() {
   const totalWatts = dispositivosAprovados.reduce((soma, d) => soma + (d.ultimaLeitura?.power_consumption_watts ?? 0), 0);
 
   // Leituras em tempo real vindas do webhook /dispositivos (tabela esp32_leituras)
-  const { leituras: leiturasWebhook, ultima: ultimaWebhook, carregando: carregandoWebhook } = useLeiturasEsp32(20);
+  const {
+    leituras: leiturasWebhook,
+    ultima: ultimaWebhook,
+    carregando: carregandoWebhook,
+    estadoTempoReal: estadoTempoRealWebhook,
+  } = useLeiturasEsp32(20);
+  const textoTempoRealWebhook = estadoTempoRealWebhook === 'ligado'
+    ? 'ao vivo'
+    : estadoTempoRealWebhook === 'erro'
+      ? 'sincronização automática'
+      : 'a ligar';
 
   if (!isAdmin) {
     return (
@@ -383,7 +393,7 @@ export default function Dispositivos() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                   </span>
-                  ao vivo
+                  {textoTempoRealWebhook}
                 </span>
               </CardTitle>
               <CardDescription>
