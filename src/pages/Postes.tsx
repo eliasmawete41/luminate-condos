@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
 import type { Database } from '@/integrations/supabase/types';
+import { useLeiturasEsp32 } from '@/hooks/useLeiturasEsp32';
 
 type Poste = Database['public']['Tables']['poles']['Row'];
 type PosteInsercao = Database['public']['Tables']['poles']['Insert'];
@@ -46,6 +47,7 @@ const tiposIluminacao: Record<string, string> = {
 export default function Postes() {
   const { toast } = useToast();
   const { isManutencao, isAdmin } = useAuth();
+  const { ultima, estadoTempoReal, ultimaActualizacao } = useLeiturasEsp32(1);
   const [postes, setPostes] = useState<Poste[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [termoBusca, setTermoBusca] = useState('');
@@ -309,6 +311,111 @@ export default function Postes() {
           )}
         </div>
       </div>
+
+      {/* Postes em tempo real (ESP32) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-primary" />
+                Postes monitorados em tempo real (ESP32)
+              </CardTitle>
+              <CardDescription>
+                Dados recebidos directamente do dispositivo Arduino
+                {ultimaActualizacao && ` · actualizado às ${ultimaActualizacao.toLocaleTimeString('pt-PT')}`}
+              </CardDescription>
+            </div>
+            <Badge
+              variant="outline"
+              className={cn(
+                estadoTempoReal === 'ligado' && 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+                estadoTempoReal === 'a_ligar' && 'bg-amber-500/10 text-amber-600 border-amber-200',
+                estadoTempoReal === 'erro' && 'bg-red-500/10 text-red-600 border-red-200',
+              )}
+            >
+              {estadoTempoReal === 'ligado' ? '● Ao vivo' : estadoTempoReal === 'a_ligar' ? 'A ligar...' : 'Sem ligação'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!ultima ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              Aguardando dados do ESP32...
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {[
+                {
+                  nome: 'Poste Bom',
+                  codigo: 'ESP-BOM',
+                  status: ultima.poste_bom_status,
+                  corrente: ultima.corrente_poste_bom,
+                  potencia: ultima.potencia_poste_bom,
+                },
+                {
+                  nome: 'Poste Estragado',
+                  codigo: 'ESP-EST',
+                  status: ultima.poste_estragado_status,
+                  corrente: ultima.corrente_poste_estragado,
+                  potencia: ultima.potencia_poste_estragado,
+                },
+              ].map((p) => {
+                const ligado = String(p.status).toUpperCase() === 'LIGADO';
+                return (
+                  <div
+                    key={p.codigo}
+                    className={cn(
+                      'rounded-xl border p-4 transition-colors',
+                      ligado ? 'border-emerald-200 bg-emerald-500/5' : 'border-slate-200 bg-slate-500/5',
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          'flex h-9 w-9 items-center justify-center rounded-full',
+                          ligado ? 'bg-emerald-500/15 text-emerald-600' : 'bg-slate-500/15 text-slate-600',
+                        )}>
+                          <Lamp className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="font-semibold">{p.nome}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{p.codigo}</div>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          ligado
+                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200'
+                            : 'bg-slate-500/10 text-slate-600 border-slate-200',
+                        )}
+                      >
+                        {ligado ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
+                        {p.status}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg bg-background/60 p-2">
+                        <div className="text-xs text-muted-foreground">Corrente</div>
+                        <div className="font-semibold">{Number(p.corrente).toFixed(2)} A</div>
+                      </div>
+                      <div className="rounded-lg bg-background/60 p-2">
+                        <div className="text-xs text-muted-foreground">Potência</div>
+                        <div className="font-semibold">{Number(p.potencia).toFixed(2)} W</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="md:col-span-2 text-xs text-muted-foreground flex items-center gap-2">
+                <span>Luminosidade ambiente (LDR):</span>
+                <span className="font-semibold text-foreground">{ultima.ldr}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Filtros */}
       <Card>
