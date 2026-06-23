@@ -427,8 +427,8 @@ export default function Dispositivos() {
                           {ultimaWebhook.poste_bom_status}
                         </Badge>
                       </div>
-                      <p className="text-sm"><span className="text-muted-foreground">Corrente:</span> <strong>{Number(ultimaWebhook.corrente_poste_bom).toFixed(2)} A</strong></p>
-                      <p className="text-sm"><span className="text-muted-foreground">Potência:</span> <strong>{Number(ultimaWebhook.potencia_poste_bom).toFixed(2)} W</strong></p>
+                     <p className="text-sm"><span className="text-muted-foreground">Corrente:</span> <strong>{Number(ultimaWebhook.corrente_poste_bom).toFixed(2)} mA</strong></p>
+                     <p className="text-sm"><span className="text-muted-foreground">Potência:</span> <strong>{Number(ultimaWebhook.potencia_poste_bom).toFixed(2)} mW</strong></p>
                     </div>
                     <div className={cn(
                       "p-4 rounded-xl border",
@@ -440,8 +440,8 @@ export default function Dispositivos() {
                           {ultimaWebhook.poste_estragado_status}
                         </Badge>
                       </div>
-                      <p className="text-sm"><span className="text-muted-foreground">Corrente:</span> <strong>{Number(ultimaWebhook.corrente_poste_estragado).toFixed(2)} A</strong></p>
-                      <p className="text-sm"><span className="text-muted-foreground">Potência:</span> <strong>{Number(ultimaWebhook.potencia_poste_estragado).toFixed(2)} W</strong></p>
+                     <p className="text-sm"><span className="text-muted-foreground">Corrente:</span> <strong>{Number(ultimaWebhook.corrente_poste_estragado).toFixed(2)} mA</strong></p>
+                     <p className="text-sm"><span className="text-muted-foreground">Potência:</span> <strong>{Number(ultimaWebhook.potencia_poste_estragado).toFixed(2)} mW</strong></p>
                     </div>
                   </div>
 
@@ -452,11 +452,11 @@ export default function Dispositivos() {
                           <TableHead>Horário</TableHead>
                           <TableHead>LDR</TableHead>
                           <TableHead>Bom</TableHead>
-                          <TableHead>I Bom (A)</TableHead>
-                          <TableHead>P Bom (W)</TableHead>
+                         <TableHead>I Bom (mA)</TableHead>
+                         <TableHead>P Bom (mW)</TableHead>
                           <TableHead>Estragado</TableHead>
-                          <TableHead>I Estr. (A)</TableHead>
-                          <TableHead>P Estr. (W)</TableHead>
+                         <TableHead>I Estr. (mA)</TableHead>
+                         <TableHead>P Estr. (mW)</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
