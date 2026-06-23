@@ -23,6 +23,7 @@ import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, Legend
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { useLeiturasEsp32 } from '@/hooks/useLeiturasEsp32';
 
 // Interface de dispositivo
 interface Dispositivo {
@@ -288,6 +289,9 @@ export default function Dispositivos() {
   const contagemOnline = dispositivosAprovados.filter(d => estaOnline(d.last_seen_at)).length;
   const contagemFalhas = dispositivosAprovados.filter(d => d.ultimaLeitura?.fault_detected).length;
   const totalWatts = dispositivosAprovados.reduce((soma, d) => soma + (d.ultimaLeitura?.power_consumption_watts ?? 0), 0);
+
+  // Leituras em tempo real vindas do webhook /dispositivos (tabela esp32_leituras)
+  const { leituras: leiturasWebhook, ultima: ultimaWebhook, carregando: carregandoWebhook } = useLeiturasEsp32(20);
 
   if (!isAdmin) {
     return (
