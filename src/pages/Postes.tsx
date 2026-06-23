@@ -195,50 +195,29 @@ export default function Postes() {
     setDialogEdicaoAberto(true);
   };
 
-  // Postes virtuais provenientes do ESP32 (sempre contados e listados)
-  const postesEsp32: Poste[] = [
-    {
-      id: 'esp32-bom',
-      code: 'ESP-BOM',
-      location_description: 'Poste Bom (ESP32)',
-      lighting_type: 'led' as any,
-      power_watts: ultima ? Math.round(Number(ultima.potencia_poste_bom)) : 0,
-      status: (ultima && String(ultima.poste_bom_status).toUpperCase() === 'LIGADO'
-        ? 'funcionando'
-        : ultima ? 'com_falha' : 'desativado') as any,
-      installation_date: null,
-      lamp_lifespan_hours: anosParaHoras(3),
-      current_lamp_hours: 0,
-      maintenance_company: 'ESP32',
-      latitude: null,
-      longitude: null,
-      block_id: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as unknown as Poste,
-    {
-      id: 'esp32-est',
-      code: 'ESP-EST',
-      location_description: 'Poste Estragado (ESP32)',
-      lighting_type: 'led' as any,
-      power_watts: ultima ? Math.round(Number(ultima.potencia_poste_estragado)) : 0,
-      status: (ultima && String(ultima.poste_estragado_status).toUpperCase() === 'LIGADO'
-        ? 'funcionando'
-        : ultima ? 'com_falha' : 'desativado') as any,
-      installation_date: null,
-      lamp_lifespan_hours: anosParaHoras(3),
-      current_lamp_hours: 0,
-      maintenance_company: 'ESP32',
-      latitude: null,
-      longitude: null,
-      block_id: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as unknown as Poste,
-  ];
-
-  // Combinar postes da base com os virtuais do ESP32
-  const postesCombinados = [...postesEsp32, ...postes];
+  // Aplicar dados em tempo real do ESP32 nos postes reais correspondentes
+  const postesCombinados = postes.map((p) => {
+    if (!ultima) return p;
+    if (p.code === 'ESP-BOM') {
+      return {
+        ...p,
+        status: (String(ultima.poste_bom_status).toUpperCase() === 'LIGADO'
+          ? 'funcionando'
+          : 'com_falha') as any,
+        power_watts: Math.round(Number(ultima.potencia_poste_bom)) || p.power_watts,
+      };
+    }
+    if (p.code === 'ESP-EST') {
+      return {
+        ...p,
+        status: (String(ultima.poste_estragado_status).toUpperCase() === 'LIGADO'
+          ? 'funcionando'
+          : 'com_falha') as any,
+        power_watts: Math.round(Number(ultima.potencia_poste_estragado)) || p.power_watts,
+      };
+    }
+    return p;
+  });
 
   // Filtrar postes
   const postesFiltrados = postesCombinados.filter(poste => {
