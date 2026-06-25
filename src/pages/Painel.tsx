@@ -113,7 +113,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-white/20"><Activity className="h-6 w-6" /></div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl drop-shadow-sm">Dashboard</h1>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl drop-shadow-sm">Painel Principal</h1>
               <p className="text-white/80">Visão geral do sistema de monitoramento de postes</p>
             </div>
           </div>
