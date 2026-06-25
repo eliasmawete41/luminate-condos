@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/botao';
 
 const adminMenuItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Painel Principal', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Postes', url: '/postes', icon: Lamp },
   { title: 'Manutenções', url: '/manutencoes', icon: Wrench },
   { title: 'Histórico', url: '/historico', icon: History },
