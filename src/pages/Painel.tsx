@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/etiqueta';
 import { Button } from '@/components/ui/botao';
 import { 
-  Lamp, AlertTriangle, Wrench, CheckCircle2, Activity,
+  Lamp, AlertTriangle, Wrench, CheckCircle2, Activity, PowerOff,
   Clock, Zap, ArrowRight, Plus, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -12,8 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
 } from 'recharts';
+import { useLeiturasEsp32 } from '@/hooks/useLeiturasEsp32';
 
-interface PoleStats { total: number; funcionando: number; com_falha: number; em_manutencao: number; }
+interface PoleStats { total: number; funcionando: number; com_falha: number; em_manutencao: number; desligado: number; }
 
 interface Maintenance {
   id: string; description: string; failure_type: string; status: string;
@@ -55,22 +56,18 @@ const lightingTypeLabels: Record<string, string> = {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [poleStats, setPoleStats] = useState<PoleStats>({ total: 0, funcionando: 0, com_falha: 0, em_manutencao: 0 });
+  const [polesRaw, setPolesRaw] = useState<Array<{ code: string; status: string; lighting_type: string }>>([]);
   const [recentMaintenances, setRecentMaintenances] = useState<Maintenance[]>([]);
   const [lightingTypes, setLightingTypes] = useState<LightingTypeCount[]>([]);
+  const { ultima } = useLeiturasEsp32(1);
 
   useEffect(() => { fetchDashboardData(); }, []);
 
   const fetchDashboardData = async () => {
     try {
-      const { data: poles } = await supabase.from('poles').select('status, lighting_type');
+      const { data: poles } = await supabase.from('poles').select('code, status, lighting_type');
       if (poles) {
-        setPoleStats({
-          total: poles.length,
-          funcionando: poles.filter(p => p.status === 'funcionando').length,
-          com_falha: poles.filter(p => p.status === 'com_falha').length,
-          em_manutencao: poles.filter(p => p.status === 'em_manutencao').length,
-        });
+        setPolesRaw(poles as Array<{ code: string; status: string; lighting_type: string }>);
         const typeCounts: Record<string, number> = {};
         poles.forEach(p => { typeCounts[p.lighting_type] = (typeCounts[p.lighting_type] || 0) + 1; });
         setLightingTypes(Object.entries(typeCounts).map(([type, count]) => ({
@@ -98,9 +95,31 @@ export default function Dashboard() {
 
   if (loading) return <div className="flex items-center justify-center h-96"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
+  const postesComEstadoReal = polesRaw.map((p) => {
+    if (!ultima) return p;
+    if (p.code === 'ESP-BOM') {
+      const ligado = ultima.poste_bom_status?.toUpperCase() === 'LIGADO';
+      return { ...p, status: ligado ? 'funcionando' : 'desligado' };
+    }
+    if (p.code === 'ESP-EST') {
+      const ligado = ultima.poste_estragado_status?.toUpperCase() === 'LIGADO';
+      return { ...p, status: ligado ? 'funcionando' : 'com_falha' };
+    }
+    return p;
+  });
+
+  const poleStats: PoleStats = {
+    total: postesComEstadoReal.length,
+    funcionando: postesComEstadoReal.filter(p => p.status === 'funcionando').length,
+    com_falha: postesComEstadoReal.filter(p => p.status === 'com_falha').length,
+    em_manutencao: postesComEstadoReal.filter(p => p.status === 'em_manutencao').length,
+    desligado: postesComEstadoReal.filter(p => p.status === 'desligado').length,
+  };
+
   const statsData = [
     { title: 'Total de Postes', value: poleStats.total, icon: Lamp, iconBg: 'bg-violet-500/15', iconColor: 'text-violet-400', gradient: 'from-violet-500/5', borderColor: 'border-l-violet-500' },
     { title: 'Funcionando', value: poleStats.funcionando, icon: CheckCircle2, iconBg: 'bg-emerald-500/15', iconColor: 'text-emerald-400', gradient: 'from-emerald-500/5', borderColor: 'border-l-emerald-500' },
+    { title: 'Desligados', value: poleStats.desligado, icon: PowerOff, iconBg: 'bg-slate-500/15', iconColor: 'text-slate-400', gradient: 'from-slate-500/5', borderColor: 'border-l-slate-500' },
     { title: 'Com Falhas', value: poleStats.com_falha, icon: AlertTriangle, iconBg: 'bg-amber-500/15', iconColor: 'text-amber-400', gradient: 'from-amber-500/5', borderColor: 'border-l-amber-500' },
     { title: 'Em Manutenção', value: poleStats.em_manutencao, icon: Wrench, iconBg: 'bg-sky-500/15', iconColor: 'text-sky-400', gradient: 'from-sky-500/5', borderColor: 'border-l-sky-500' },
   ];
@@ -124,7 +143,7 @@ export default function Dashboard() {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statsData.map((stat) => (
           <Card key={stat.title} className={cn("border-l-4 glass-card hover:shadow-lg transition-all", stat.borderColor)}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -146,11 +165,16 @@ export default function Dashboard() {
             <CardDescription>Status geral da iluminação</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                 <div className="flex items-center gap-2 mb-2"><CheckCircle2 className="h-5 w-5 text-emerald-400" /><span className="font-medium text-emerald-400">Operacionais</span></div>
                 <p className="text-3xl font-bold text-emerald-300">{poleStats.funcionando}</p>
                 <p className="text-sm text-emerald-500/60">postes funcionando</p>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-500/10 border border-slate-500/20">
+                <div className="flex items-center gap-2 mb-2"><PowerOff className="h-5 w-5 text-slate-400" /><span className="font-medium text-slate-400">Desligados</span></div>
+                <p className="text-3xl font-bold text-slate-300">{poleStats.desligado}</p>
+                <p className="text-sm text-slate-500/60">sem iluminação</p>
               </div>
               <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-center gap-2 mb-2"><AlertTriangle className="h-5 w-5 text-amber-400" /><span className="font-medium text-amber-400">Com Problemas</span></div>
