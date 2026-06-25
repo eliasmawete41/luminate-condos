@@ -165,7 +165,7 @@ export default function Dashboard() {
             <CardDescription>Status geral da iluminação</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                 <div className="flex items-center gap-2 mb-2"><CheckCircle2 className="h-5 w-5 text-emerald-400" /><span className="font-medium text-emerald-400">Operacionais</span></div>
                 <p className="text-3xl font-bold text-emerald-300">{poleStats.funcionando}</p>
