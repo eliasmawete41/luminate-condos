@@ -1,0 +1,15 @@
+{
+  "name": "PosteGuard - Monitoramento de Postes",
+  "short_name": "PosteGuard",
+  "description": "Sistema web para monitoramento de postes elétricos em condomínios.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#f97316",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
