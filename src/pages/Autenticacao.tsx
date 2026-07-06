@@ -105,9 +105,9 @@ export default function Auth() {
 
             <div className="grid grid-cols-2 gap-4">
               {[
-                { titulo: 'Postes monitorados', valor: '24/7' },
-                { titulo: 'Tempo médio de resposta', valor: '< 2min' },
-                { titulo: 'Sensores IoT', valor: 'ESP32' },
+                { titulo: 'Postes monitorados', valor: '24/24h' },
+                { titulo: 'Tempo médio de resposta', valor: ' 5 min' },
+                { titulo: 'Sensores funcionando ', valor: '24h' },
                 { titulo: 'Histórico completo', valor: 'PDF' },
               ].map((item) => (
                 <div key={item.titulo} className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur">
