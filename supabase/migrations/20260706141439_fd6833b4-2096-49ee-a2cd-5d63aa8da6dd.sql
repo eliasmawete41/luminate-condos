@@ -1,0 +1,1 @@
+UPDATE public.condo_settings SET support_phone = '+244 959 483 438';
