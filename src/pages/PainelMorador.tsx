@@ -6,7 +6,6 @@ import {
   MessageCircle, 
   Phone, 
   Star, 
-  Lamp,
   MapPin,
   AlertTriangle,
   CheckCircle2,
@@ -24,7 +23,6 @@ export default function ConsumerDashboard() {
   const [loading, setLoading] = useState(true);
   const [supportPhone, setSupportPhone] = useState('');
   const [condoName, setCondoName] = useState('');
-  const [poleStats, setPoleStats] = useState({ total: 0, funcionando: 0, com_falha: 0 });
   const [openConversations, setOpenConversations] = useState(0);
 
   useEffect(() => {
