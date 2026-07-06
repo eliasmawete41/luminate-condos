@@ -1,7 +1,7 @@
 import { 
   LayoutDashboard, Lamp, Building2, Users, Wrench, Bell, Settings,
   LogOut, Zap, Cpu, MessageCircle, Star, HeadphonesIcon, MapPin,
-  HardHat, History
+  HardHat, History, UserCircle
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,7 @@ const adminManagementItems = [
 const adminUtilityItems = [
   { title: 'Suporte', url: '/suporte', icon: HeadphonesIcon },
   { title: 'Notificações', url: '/notificacoes', icon: Bell },
+  { title: 'Meu Perfil', url: '/perfil', icon: UserCircle },
   { title: 'Configurações', url: '/configuracoes', icon: Settings },
 ];
 
@@ -38,11 +39,13 @@ const consumerMenuItems = [
   { title: 'Início', url: '/inicio', icon: LayoutDashboard },
   { title: 'Suporte', url: '/suporte', icon: MessageCircle },
   { title: 'Avaliações', url: '/avaliacoes', icon: Star },
+  { title: 'Meu Perfil', url: '/perfil', icon: UserCircle },
 ];
 
 const technicianMenuItems = [
   { title: 'Minhas Ordens', url: '/tecnico', icon: HardHat },
   { title: 'Suporte', url: '/suporte', icon: MessageCircle },
+  { title: 'Meu Perfil', url: '/perfil', icon: UserCircle },
 ];
 
 export function AppSidebar() {

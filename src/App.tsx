@@ -24,6 +24,7 @@ import MonitorDispositivos from "./pages/MonitorDispositivos";
 import Support from "./pages/Suporte";
 import Evaluations from "./pages/Avaliacoes";
 import MapPage from "./pages/Mapa";
+import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NaoEncontrado";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/dispositivos" element={<Devices />} />
               <Route path="/monitor-esp32" element={<MonitorDispositivos />} />
               <Route path="/mapa" element={<MapPage />} />
+              <Route path="/perfil" element={<Perfil />} />
               
               {/* Rotas do técnico de manutenção */}
               <Route path="/tecnico" element={<TechnicianDashboard />} />
