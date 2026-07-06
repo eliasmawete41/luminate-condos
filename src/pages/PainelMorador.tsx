@@ -31,23 +31,14 @@ export default function ConsumerDashboard() {
 
   const fetchData = async () => {
     try {
-      const [settingsRes, polesRes, convRes] = await Promise.all([
+      const [settingsRes, convRes] = await Promise.all([
         supabase.from('condo_settings').select('*').limit(1).single(),
-        supabase.from('poles').select('status'),
         supabase.from('support_conversations').select('id', { count: 'exact' }).eq('status', 'aberto'),
       ]);
 
       if (settingsRes.data) {
         setSupportPhone(settingsRes.data.support_phone || '');
         setCondoName(settingsRes.data.condo_name || 'Condomínio');
-      }
-
-      if (polesRes.data) {
-        setPoleStats({
-          total: polesRes.data.length,
-          funcionando: polesRes.data.filter((p: any) => p.status === 'funcionando').length,
-          com_falha: polesRes.data.filter((p: any) => p.status === 'com_falha').length,
-        });
       }
 
       setOpenConversations(convRes.count || 0);
