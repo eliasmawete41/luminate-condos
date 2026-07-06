@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Search, Users as IconeUsuarios, Mail, Phone, MoreHorizontal,
-  Shield, UserCheck, Loader2, Plus, UserPlus, Wrench, Trash2
+  Shield, UserCheck, Loader2, Plus, UserPlus, Wrench, Trash2, Clock, Check, X, KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -55,8 +55,71 @@ export default function Usuarios() {
   const [novoUsuario, setNovoUsuario] = useState({
     full_name: '', email: '', password: '', phone: '', role: 'morador',
   });
+  const [pendentes, setPendentes] = useState<Array<{ id: string; full_name: string; email: string; phone: string | null; requested_unit_id: string | null; unit_number?: string; block_name?: string }>>([]);
+  const [pedidosSenha, setPedidosSenha] = useState<Array<{ id: string; email: string; full_name: string; unit_number: string | null; created_at: string; status: string }>>([]);
+  const [resetDialog, setResetDialog] = useState<{ open: boolean; requestId: string | null; senha: string }>({ open: false, requestId: null, senha: '' });
+  const [processando, setProcessando] = useState(false);
 
-  useEffect(() => { buscarUsuarios(); }, []);
+  useEffect(() => { buscarUsuarios(); buscarPendentes(); buscarPedidosSenha(); }, []);
+
+  const buscarPendentes = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, phone, requested_unit_id, units:requested_unit_id(number, blocks:block_id(name))')
+      .eq('status', 'pendente');
+    setPendentes((data || []).map((p: any) => ({
+      id: p.id, full_name: p.full_name, email: p.email, phone: p.phone,
+      requested_unit_id: p.requested_unit_id,
+      unit_number: p.units?.number,
+      block_name: p.units?.blocks?.name,
+    })));
+  };
+
+  const buscarPedidosSenha = async () => {
+    const { data } = await supabase
+      .from('password_reset_requests')
+      .select('*')
+      .eq('status', 'pendente')
+      .order('created_at', { ascending: false });
+    setPedidosSenha((data || []) as any);
+  };
+
+  const aprovarMorador = async (userId: string) => {
+    setProcessando(true);
+    const { error } = await supabase.rpc('approve_resident', { _user_id: userId });
+    setProcessando(false);
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Morador aprovado' });
+    buscarPendentes(); buscarUsuarios();
+  };
+
+  const rejeitarMorador = async (userId: string) => {
+    const motivo = prompt('Motivo da rejeição (opcional):') || 'Cadastro não aprovado';
+    setProcessando(true);
+    const { error } = await supabase.rpc('reject_resident', { _user_id: userId, _reason: motivo });
+    setProcessando(false);
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Cadastro rejeitado' });
+    buscarPendentes();
+  };
+
+  const aprovarPedidoSenha = async () => {
+    if (!resetDialog.requestId || resetDialog.senha.length < 6) {
+      toast({ title: 'Senha mínima de 6 caracteres', variant: 'destructive' }); return;
+    }
+    setProcessando(true);
+    const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+      body: { request_id: resetDialog.requestId, new_password: resetDialog.senha },
+    });
+    setProcessando(false);
+    if (error || (data as any)?.error) {
+      toast({ title: 'Erro', description: (error?.message || (data as any)?.error), variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Senha redefinida', description: 'Comunique a nova senha ao morador.' });
+    setResetDialog({ open: false, requestId: null, senha: '' });
+    buscarPedidosSenha();
+  };
 
   // Buscar todos os usuários com seus papéis
   const buscarUsuarios = async () => {
@@ -245,6 +308,90 @@ export default function Usuarios() {
           )}
         </div>
       </div>
+
+      {isAdmin && pendentes.length > 0 && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-600" />
+              Cadastros Pendentes de Aprovação
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">{pendentes.length}</Badge>
+            </CardTitle>
+            <CardDescription>Novos moradores aguardando validação</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2">
+              {pendentes.map(p => (
+                <div key={p.id} className="p-4 rounded-lg border bg-card flex flex-col gap-3">
+                  <div>
+                    <p className="font-semibold">{p.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{p.email}</p>
+                    {p.phone && <p className="text-xs text-muted-foreground">{p.phone}</p>}
+                    <p className="text-xs mt-1"><span className="text-muted-foreground">Unidade:</span> <span className="font-medium">{p.block_name || '—'} / {p.unit_number || '—'}</span></p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => aprovarMorador(p.id)} disabled={processando} className="flex-1 gap-1 bg-emerald-600 hover:bg-emerald-700">
+                      <Check className="h-4 w-4" /> Aprovar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => rejeitarMorador(p.id)} disabled={processando} className="flex-1 gap-1">
+                      <X className="h-4 w-4" /> Rejeitar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && pedidosSenha.length > 0 && (
+        <Card className="border-sky-500/40 bg-sky-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-sky-600" />
+              Pedidos de Recuperação de Senha
+              <Badge variant="outline" className="bg-sky-500/10 text-sky-600 border-sky-500/30">{pedidosSenha.length}</Badge>
+            </CardTitle>
+            <CardDescription>Defina uma nova senha temporária e comunique ao morador</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2">
+              {pedidosSenha.map(r => (
+                <div key={r.id} className="p-4 rounded-lg border bg-card flex flex-col gap-3">
+                  <div>
+                    <p className="font-semibold">{r.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{r.email}</p>
+                    {r.unit_number && <p className="text-xs text-muted-foreground">Unidade: {r.unit_number}</p>}
+                  </div>
+                  <Button size="sm" onClick={() => setResetDialog({ open: true, requestId: r.id, senha: '' })} className="gap-1">
+                    <KeyRound className="h-4 w-4" /> Definir nova senha
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={resetDialog.open} onOpenChange={(o) => setResetDialog({ ...resetDialog, open: o })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Definir nova senha temporária</DialogTitle>
+            <DialogDescription>O morador deverá alterar a senha após o próximo login.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Nova senha</Label>
+            <Input type="text" value={resetDialog.senha} onChange={(e) => setResetDialog({ ...resetDialog, senha: e.target.value })} placeholder="Mínimo 6 caracteres" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetDialog({ open: false, requestId: null, senha: '' })}>Cancelar</Button>
+            <Button onClick={aprovarPedidoSenha} disabled={processando} className="gap-2">
+              {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Estatísticas */}
       <div className="grid gap-4 md:grid-cols-5">

@@ -2,12 +2,15 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/barra-lateral';
 import { AppSidebar } from './BarraLateral';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { Bell, Menu, Moon, Sun } from 'lucide-react';
+import { Menu, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/botao';
 import { useTema } from '@/contexts/ContextoTema';
+import { SinoNotificacoes } from '@/components/SinoNotificacoes';
+import { Clock, ShieldAlert } from 'lucide-react';
+import { Card } from '@/components/ui/cartao';
 
 export function AppLayout() {
-  const { user, loading, isAdmin, roles } = useAuth();
+  const { user, loading, isAdmin, roles, profile, signOut } = useAuth();
   const location = useLocation();
   const { tema, alternarTema } = useTema();
 
@@ -23,6 +26,29 @@ export function AppLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+
+  // Bloqueia acesso a moradores pendentes/rejeitados
+  if (profile && (profile.status === 'pendente' || profile.status === 'rejeitado')) {
+    const pend = profile.status === 'pendente';
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-orange-950 p-6">
+        <Card className="max-w-md w-full p-8 text-center space-y-4">
+          <div className={`mx-auto h-16 w-16 rounded-2xl flex items-center justify-center ${pend ? 'bg-amber-500/20 text-amber-500' : 'bg-destructive/20 text-destructive'}`}>
+            {pend ? <Clock className="h-8 w-8" /> : <ShieldAlert className="h-8 w-8" />}
+          </div>
+          <h1 className="text-2xl font-bold">
+            {pend ? 'Conta em análise' : 'Cadastro rejeitado'}
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            {pend
+              ? 'O seu cadastro está aguardando aprovação da administração do condomínio. Você receberá acesso assim que for validado.'
+              : profile.rejection_reason || 'O seu cadastro não foi aprovado pela administração.'}
+          </p>
+          <Button variant="outline" onClick={signOut} className="w-full">Sair</Button>
+        </Card>
+      </div>
+    );
+  }
 
   const ehTecnico = roles.includes('manutencao') && !isAdmin;
   const ehConsumidor = !isAdmin && !ehTecnico && (roles.includes('morador') || roles.length === 0);
@@ -65,11 +91,7 @@ export function AppLayout() {
               >
                 {tema === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
-              {!ehConsumidor && (
-                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground hover:bg-accent">
-                  <Bell className="h-5 w-5" />
-                </Button>
-              )}
+              <SinoNotificacoes />
             </div>
           </header>
           {/* Área de conteúdo principal */}
