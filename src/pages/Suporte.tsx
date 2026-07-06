@@ -1,233 +1,391 @@
-import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/cartao';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Card, CardContent } from '@/components/ui/cartao';
 import { Button } from '@/components/ui/botao';
 import { Input } from '@/components/ui/entrada';
-import { Badge } from '@/components/ui/etiqueta';
 import { ScrollArea } from '@/components/ui/area-rolagem';
-import { 
-  MessageCircle, 
-  Send, 
-  Plus, 
-  ArrowLeft, 
-  Loader2,
-  Phone,
-  Bot,
-  User
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialogo';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  MessageCircle, Send, Plus, ArrowLeft, Loader2, Search, Check, CheckCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/ContextoAutenticacao';
 import { useToast } from '@/hooks/use-toast';
 
-// Interface de conversa
-interface Conversa {
+// Cliente sem tipos para tabelas ainda não presentes no ficheiro de tipos
+const db = supabase as any;
+
+interface Perfil {
   id: string;
-  consumer_id: string;
-  subject: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  consumer_name?: string;
-  consumer_email?: string;
+  full_name: string;
+  email: string;
+  avatar_url: string | null;
 }
 
-// Interface de mensagem
+interface Conversa {
+  id: string;
+  last_message: string | null;
+  last_message_at: string | null;
+  updated_at: string;
+  outro: Perfil | null;
+  nao_lidas: number;
+}
+
 interface Mensagem {
   id: string;
   conversation_id: string;
   sender_id: string;
   message: string;
-  is_from_bot: boolean;
-  is_read: boolean;
   created_at: string;
+  read_at: string | null;
 }
 
-// Mensagem de boas-vindas
-const BOAS_VINDAS_BOT = 'Olá! 👋 Sou o assistente virtual do PosteGuard. Deixe a sua mensagem e a administração responderá em breve. Enquanto isso, posso ajudar com algumas dúvidas comuns.';
-
-// Respostas automáticas exibidas enquanto o admin não responde
-const RESPOSTAS_AUTOMATICAS = [
-  'Recebemos a sua mensagem ✅. Um atendente humano será notificado.',
-  'O horário de atendimento da administração é das 8h às 18h, de segunda a sábado.',
-  'Dica: se a avaria estiver visível, registe também uma ocorrência na secção "Notificações" para acelerar o atendimento.',
-  'Para emergências (poste caído, fios expostos ou risco elétrico), por favor ligue diretamente para o número de suporte.',
-  'Ainda estamos a alertar a administração. Pode adicionar fotos ou mais detalhes à sua mensagem que ajudem a resolver mais rápido.',
-];
+interface Presenca {
+  user_id: string;
+  is_online: boolean;
+  last_seen: string;
+  typing_in_conversation: string | null;
+}
 
 export default function Suporte() {
-  const { user: usuario, isAdmin } = useAuth();
+  const { user: usuario } = useAuth();
   const { toast } = useToast();
+
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [conversaSelecionada, setConversaSelecionada] = useState<Conversa | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [novaMensagem, setNovaMensagem] = useState('');
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
-  const [telefoneSuporte, setTelefoneSuporte] = useState('');
-  const refFimMensagens = useRef<HTMLDivElement>(null);
-  const indiceBotRef = useRef(0);
 
+  // Modal de nova conversa
+  const [modalAberto, setModalAberto] = useState(false);
+  const [pesquisa, setPesquisa] = useState('');
+  const [resultados, setResultados] = useState<Perfil[]>([]);
+  const [pesquisando, setPesquisando] = useState(false);
+
+  // Presenças
+  const [presencas, setPresencas] = useState<Record<string, Presenca>>({});
+
+  const refFim = useRef<HTMLDivElement>(null);
+  const digitandoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ============ Presença própria ============
   useEffect(() => {
-    buscarConversas();
-    buscarConfiguracoes();
-  }, []);
+    if (!usuario) return;
+    const marcarOnline = async () => {
+      await db.from('user_presence').upsert({
+        user_id: usuario.id,
+        is_online: true,
+        last_seen: new Date().toISOString(),
+        typing_in_conversation: null,
+      });
+    };
+    marcarOnline();
+    const intervalo = setInterval(marcarOnline, 30000);
 
-  useEffect(() => {
-    if (conversaSelecionada) {
-      buscarMensagens(conversaSelecionada.id);
-      
-      // Inscrição em tempo real para novas mensagens
-      const canal = supabase
-        .channel(`mensagens-${conversaSelecionada.id}`)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'support_messages',
-          filter: `conversation_id=eq.${conversaSelecionada.id}`,
-        }, (payload) => {
-          setMensagens(anterior => [...anterior, payload.new as Mensagem]);
-        })
-        .subscribe();
+    const marcarOffline = () => {
+      db.from('user_presence').upsert({
+        user_id: usuario.id,
+        is_online: false,
+        last_seen: new Date().toISOString(),
+        typing_in_conversation: null,
+      });
+    };
+    window.addEventListener('beforeunload', marcarOffline);
+    return () => {
+      clearInterval(intervalo);
+      window.removeEventListener('beforeunload', marcarOffline);
+      marcarOffline();
+    };
+  }, [usuario]);
 
-      return () => { supabase.removeChannel(canal); };
-    }
-  }, [conversaSelecionada]);
-
-  useEffect(() => {
-    refFimMensagens.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mensagens]);
-
-  // Buscar configurações do condomínio
-  const buscarConfiguracoes = async () => {
-    const { data } = await supabase.from('condo_settings').select('support_phone').limit(1).single();
-    if (data) setTelefoneSuporte(data.support_phone || '');
-  };
-
-  // Buscar conversas
-  const buscarConversas = async () => {
+  // ============ Carregar conversas ============
+  const carregarConversas = useCallback(async () => {
+    if (!usuario) return;
     try {
-      const { data, error } = await supabase
-        .from('support_conversations')
-        .select('*')
-        .order('updated_at', { ascending: false });
+      const { data: minhas, error: erroMinhas } = await db
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', usuario.id);
+      if (erroMinhas) throw erroMinhas;
 
-      if (error) throw error;
-      const lista = data || [];
-      // Buscar perfis em paralelo para mostrar o nome do morador
-      const ids = [...new Set(lista.map((c) => c.consumer_id))];
-      let perfis: Record<string, { full_name: string; email: string }> = {};
-      if (ids.length > 0) {
-        const { data: perfilData } = await supabase
+      const ids: string[] = (minhas || []).map((r: any) => r.conversation_id);
+      if (ids.length === 0) { setConversas([]); return; }
+
+      const { data: convs, error: erroConvs } = await db
+        .from('conversations')
+        .select('*')
+        .in('id', ids)
+        .order('updated_at', { ascending: false });
+      if (erroConvs) throw erroConvs;
+
+      // participantes de todas
+      const { data: parts } = await db
+        .from('conversation_participants')
+        .select('conversation_id, user_id')
+        .in('conversation_id', ids);
+
+      const outrosIds = [...new Set(
+        (parts || [])
+          .filter((p: any) => p.user_id !== usuario.id)
+          .map((p: any) => p.user_id)
+      )] as string[];
+
+      let perfis: Record<string, Perfil> = {};
+      if (outrosIds.length > 0) {
+        const { data: perfilData } = await db
           .from('profiles')
-          .select('id, full_name, email')
-          .in('id', ids);
-        perfis = (perfilData || []).reduce((acc, p) => {
-          acc[p.id] = { full_name: p.full_name, email: p.email };
-          return acc;
-        }, {} as Record<string, { full_name: string; email: string }>);
+          .select('id, full_name, email, avatar_url')
+          .in('id', outrosIds);
+        perfis = (perfilData || []).reduce((acc: any, p: Perfil) => {
+          acc[p.id] = p; return acc;
+        }, {});
       }
-      setConversas(
-        lista.map((c) => ({
-          ...c,
-          consumer_name: perfis[c.consumer_id]?.full_name,
-          consumer_email: perfis[c.consumer_id]?.email,
-        })),
-      );
-    } catch (erro) {
+
+      // não lidas
+      const { data: naoLidasData } = await db
+        .from('chat_messages')
+        .select('conversation_id')
+        .in('conversation_id', ids)
+        .is('read_at', null)
+        .neq('sender_id', usuario.id);
+      const contagem: Record<string, number> = {};
+      (naoLidasData || []).forEach((m: any) => {
+        contagem[m.conversation_id] = (contagem[m.conversation_id] || 0) + 1;
+      });
+
+      const lista: Conversa[] = (convs || []).map((c: any) => {
+        const outroId = (parts || []).find(
+          (p: any) => p.conversation_id === c.id && p.user_id !== usuario.id
+        )?.user_id;
+        return {
+          id: c.id,
+          last_message: c.last_message,
+          last_message_at: c.last_message_at,
+          updated_at: c.updated_at,
+          outro: outroId ? perfis[outroId] || null : null,
+          nao_lidas: contagem[c.id] || 0,
+        };
+      });
+
+      // ordenar por última mensagem
+      lista.sort((a, b) => {
+        const ta = a.last_message_at || a.updated_at;
+        const tb = b.last_message_at || b.updated_at;
+        return new Date(tb).getTime() - new Date(ta).getTime();
+      });
+      setConversas(lista);
+
+      // buscar presenças dos outros
+      if (outrosIds.length > 0) {
+        const { data: pres } = await db
+          .from('user_presence')
+          .select('*')
+          .in('user_id', outrosIds);
+        const map: Record<string, Presenca> = {};
+        (pres || []).forEach((p: Presenca) => { map[p.user_id] = p; });
+        setPresencas(map);
+      }
+    } catch (erro: any) {
       console.error('Erro:', erro);
+      toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
     } finally {
       setCarregando(false);
     }
-  };
+  }, [usuario, toast]);
 
-  // Buscar mensagens de uma conversa
-  const buscarMensagens = async (idConversa: string) => {
-    const { data } = await supabase
-      .from('support_messages')
-      .select('*')
-      .eq('conversation_id', idConversa)
-      .order('created_at', { ascending: true });
+  useEffect(() => { carregarConversas(); }, [carregarConversas]);
 
-    setMensagens(data || []);
-  };
-
-  // Criar nova conversa
-  const criarConversa = async () => {
+  // ============ Realtime: mensagens novas em qualquer conversa minha ============
+  useEffect(() => {
     if (!usuario) return;
+    const canal = supabase
+      .channel('chat-global')
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages',
+      }, () => { carregarConversas(); })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'user_presence',
+      }, (payload: any) => {
+        const p = payload.new as Presenca;
+        setPresencas(prev => ({ ...prev, [p.user_id]: p }));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [usuario, carregarConversas]);
 
+  // ============ Carregar mensagens da conversa selecionada ============
+  useEffect(() => {
+    if (!conversaSelecionada || !usuario) return;
+
+    const carregar = async () => {
+      const { data } = await db
+        .from('chat_messages')
+        .select('*')
+        .eq('conversation_id', conversaSelecionada.id)
+        .order('created_at', { ascending: true });
+      setMensagens(data || []);
+
+      // marcar como lidas
+      await db
+        .from('chat_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conversaSelecionada.id)
+        .neq('sender_id', usuario.id)
+        .is('read_at', null);
+    };
+    carregar();
+
+    const canal = supabase
+      .channel(`msg-${conversaSelecionada.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages',
+        filter: `conversation_id=eq.${conversaSelecionada.id}`,
+      }, (payload: any) => {
+        const nova = payload.new as Mensagem;
+        setMensagens(anterior => {
+          if (anterior.some(m => m.id === nova.id)) return anterior;
+          return [...anterior, nova];
+        });
+        if (nova.sender_id !== usuario.id) {
+          db.from('chat_messages')
+            .update({ read_at: new Date().toISOString() })
+            .eq('id', nova.id);
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'chat_messages',
+        filter: `conversation_id=eq.${conversaSelecionada.id}`,
+      }, (payload: any) => {
+        const atual = payload.new as Mensagem;
+        setMensagens(anterior => anterior.map(m => m.id === atual.id ? atual : m));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(canal); };
+  }, [conversaSelecionada, usuario]);
+
+  useEffect(() => {
+    refFim.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [mensagens]);
+
+  // ============ Pesquisa de utilizadores ============
+  useEffect(() => {
+    if (!modalAberto) return;
+    const timeout = setTimeout(async () => {
+      setPesquisando(true);
+      try {
+        let query = db
+          .from('profiles')
+          .select('id, full_name, email, avatar_url')
+          .neq('id', usuario?.id || '')
+          .limit(30);
+        if (pesquisa.trim()) {
+          const termo = `%${pesquisa.trim()}%`;
+          query = query.or(`full_name.ilike.${termo},email.ilike.${termo}`);
+        }
+        const { data } = await query;
+        setResultados(data || []);
+      } finally {
+        setPesquisando(false);
+      }
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [pesquisa, modalAberto, usuario]);
+
+  // ============ Iniciar conversa com utilizador ============
+  const iniciarConversa = async (outro: Perfil) => {
+    if (!usuario) return;
     try {
-      // Buscar nome do morador para usar como assunto da conversa
-      const { data: perfil } = await supabase
-        .from('profiles')
-        .select('full_name, email')
-        .eq('id', usuario.id)
-        .single();
+      // procurar conversa existente entre os dois
+      const { data: minhas } = await db
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', usuario.id);
+      const meusIds: string[] = (minhas || []).map((r: any) => r.conversation_id);
 
-      const nomeMorador = perfil?.full_name || 'Morador';
+      let convId: string | null = null;
+      if (meusIds.length > 0) {
+        const { data: dele } = await db
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('user_id', outro.id)
+          .in('conversation_id', meusIds);
+        if (dele && dele.length > 0) convId = dele[0].conversation_id;
+      }
 
-      const { data, error } = await supabase
-        .from('support_conversations')
-        .insert({ consumer_id: usuario.id, subject: nomeMorador })
-        .select()
-        .single();
+      if (!convId) {
+        const { data: nova, error } = await db
+          .from('conversations')
+          .insert({})
+          .select()
+          .single();
+        if (error) throw error;
+        convId = nova.id;
+        const { error: e2 } = await db
+          .from('conversation_participants')
+          .insert([
+            { conversation_id: convId, user_id: usuario.id },
+            { conversation_id: convId, user_id: outro.id },
+          ]);
+        if (e2) throw e2;
+      }
 
-      if (error) throw error;
-
-      const novaConversa = {
-        ...data,
-        consumer_name: nomeMorador,
-        consumer_email: perfil?.email,
+      setModalAberto(false);
+      setPesquisa('');
+      await carregarConversas();
+      const encontrada: Conversa = {
+        id: convId!,
+        last_message: null, last_message_at: null,
+        updated_at: new Date().toISOString(),
+        outro, nao_lidas: 0,
       };
-      setConversas(anterior => [novaConversa, ...anterior]);
-      setConversaSelecionada(novaConversa);
-      indiceBotRef.current = 0;
-
-      // Resposta automática
-      await supabase.from('support_messages').insert({
-        conversation_id: data.id,
-        sender_id: usuario.id,
-        message: BOAS_VINDAS_BOT,
-        is_from_bot: true,
-      });
+      setConversaSelecionada(encontrada);
     } catch (erro: any) {
       toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
     }
   };
 
-  // Enviar mensagem
-  const enviarMensagem = async () => {
-    if (!novaMensagem.trim() || !conversaSelecionada || !usuario) return;
+  // ============ Digitando ============
+  const aoDigitar = (valor: string) => {
+    setNovaMensagem(valor);
+    if (!usuario || !conversaSelecionada) return;
+    db.from('user_presence').upsert({
+      user_id: usuario.id, is_online: true,
+      last_seen: new Date().toISOString(),
+      typing_in_conversation: conversaSelecionada.id,
+    });
+    if (digitandoTimeoutRef.current) clearTimeout(digitandoTimeoutRef.current);
+    digitandoTimeoutRef.current = setTimeout(() => {
+      db.from('user_presence').upsert({
+        user_id: usuario.id, is_online: true,
+        last_seen: new Date().toISOString(),
+        typing_in_conversation: null,
+      });
+    }, 2500);
+  };
 
+  // ============ Enviar ============
+  const enviar = async () => {
+    if (!novaMensagem.trim() || !conversaSelecionada || !usuario) return;
     setEnviando(true);
     try {
-      const { error } = await supabase.from('support_messages').insert({
+      const { error } = await db.from('chat_messages').insert({
         conversation_id: conversaSelecionada.id,
         sender_id: usuario.id,
         message: novaMensagem.trim(),
-        is_from_bot: false,
       });
-
       if (error) throw error;
       setNovaMensagem('');
-
-      // Se for morador e o admin ainda não respondeu, enviar mensagem programada
-      if (!isAdmin) {
-        const adminRespondeu = mensagens.some(
-          (m) => !m.is_from_bot && m.sender_id !== usuario.id,
-        );
-        if (!adminRespondeu) {
-          const resposta = RESPOSTAS_AUTOMATICAS[indiceBotRef.current % RESPOSTAS_AUTOMATICAS.length];
-          indiceBotRef.current += 1;
-          setTimeout(async () => {
-            await supabase.from('support_messages').insert({
-              conversation_id: conversaSelecionada.id,
-              sender_id: usuario.id,
-              message: resposta,
-              is_from_bot: true,
-            });
-          }, 1500);
-        }
-      }
+      db.from('user_presence').upsert({
+        user_id: usuario.id, is_online: true,
+        last_seen: new Date().toISOString(),
+        typing_in_conversation: null,
+      });
     } catch (erro: any) {
       toast({ title: 'Erro', description: erro.message, variant: 'destructive' });
     } finally {
@@ -235,15 +393,27 @@ export default function Suporte() {
     }
   };
 
-  // Formatar hora
-  const formatarHora = (dataString: string) => {
-    return new Date(dataString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // ============ Helpers ============
+  const formatarHora = (s: string) =>
+    new Date(s).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+
+  const formatarQuando = (s: string | null) => {
+    if (!s) return '';
+    const d = new Date(s);
+    const hoje = new Date();
+    if (d.toDateString() === hoje.toDateString()) return formatarHora(s);
+    const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+    if (d.toDateString() === ontem.toDateString()) return 'Ontem';
+    return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
   };
 
-  // Formatar data curta
-  const formatarData = (dataString: string) => {
-    return new Date(dataString).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  };
+  const outroPresenca = conversaSelecionada?.outro
+    ? presencas[conversaSelecionada.outro.id]
+    : null;
+  const outroDigitando = outroPresenca?.typing_in_conversation === conversaSelecionada?.id;
+
+  const iniciais = (nome: string | undefined) =>
+    (nome || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 
   if (carregando) {
     return (
@@ -255,138 +425,164 @@ export default function Suporte() {
 
   return (
     <div className="space-y-4">
-      {/* Cabeçalho */}
       <div className="rounded-xl gradient-sunset p-5 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold md:text-2xl">Apoio ao Cliente</h1>
-            <p className="text-white/80 text-sm">Chat com a administração do condomínio</p>
+            <h1 className="text-xl font-bold md:text-2xl">Mensagens</h1>
+            <p className="text-white/80 text-sm">Conversa em tempo real com moradores, técnicos e administração</p>
           </div>
-          {telefoneSuporte && (
-            <a href={`tel:${telefoneSuporte}`} className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
-              <Phone className="h-4 w-4" />
-              <span className="text-sm font-medium">{telefoneSuporte}</span>
-            </a>
-          )}
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[300px_1fr] h-[calc(100vh-280px)]">
-        {/* Lista de conversas */}
-        <Card className="flex flex-col">
-          <CardHeader className="pb-3 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Conversas</CardTitle>
-              <Button size="sm" onClick={criarConversa} className="gap-1">
-                <Plus className="h-3 w-3" /> Nova
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto p-2">
+      <div className="grid gap-4 lg:grid-cols-[340px_1fr] h-[calc(100vh-260px)]">
+        {/* Lista */}
+        <Card className="flex flex-col overflow-hidden">
+          <div className="p-3 border-b flex-shrink-0 flex items-center gap-2">
+            <span className="font-semibold text-sm flex-1">Conversas</span>
+            <Button size="sm" onClick={() => setModalAberto(true)} className="gap-1">
+              <Plus className="h-3 w-3" /> Nova
+            </Button>
+          </div>
+          <ScrollArea className="flex-1">
             {conversas.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-10 text-muted-foreground px-4">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Nenhuma conversa</p>
+                <p className="text-sm">Nenhuma conversa ainda</p>
+                <p className="text-xs mt-1">Clique em "Nova" para iniciar</p>
               </div>
             ) : (
-              <div className="space-y-1">
-                {conversas.map((conv) => (
-                  <div
-                    key={conv.id}
-                    onClick={() => setConversaSelecionada(conv)}
-                    className={cn(
-                      "p-3 rounded-lg cursor-pointer transition-colors",
-                      conversaSelecionada?.id === conv.id
-                        ? "bg-primary/10 border border-primary/30"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm truncate">
-                        {conv.consumer_name || conv.subject}
-                      </span>
-                      <Badge variant={conv.status === 'aberto' ? 'default' : 'secondary'} className="text-[10px] px-1.5">
-                        {conv.status}
-                      </Badge>
-                    </div>
-                    {isAdmin && conv.consumer_email && (
-                      <p className="text-[11px] text-muted-foreground truncate">{conv.consumer_email}</p>
-                    )}
-                    <span className="text-xs text-muted-foreground">{formatarData(conv.created_at)}</span>
-                  </div>
-                ))}
+              <div>
+                {conversas.map((conv) => {
+                  const pres = conv.outro ? presencas[conv.outro.id] : null;
+                  const online = pres?.is_online;
+                  const digitando = pres?.typing_in_conversation === conv.id;
+                  const ativa = conversaSelecionada?.id === conv.id;
+                  return (
+                    <button
+                      key={conv.id}
+                      onClick={() => setConversaSelecionada(conv)}
+                      className={cn(
+                        "w-full text-left px-3 py-3 flex items-center gap-3 border-b transition-colors",
+                        ativa ? "bg-primary/10" : "hover:bg-muted/50"
+                      )}
+                    >
+                      <div className="relative shrink-0">
+                        <Avatar className="h-11 w-11">
+                          <AvatarImage src={conv.outro?.avatar_url || undefined} />
+                          <AvatarFallback className="gradient-primary text-primary-foreground">
+                            {iniciais(conv.outro?.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {online && (
+                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-sm truncate">
+                            {conv.outro?.full_name || 'Utilizador'}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            {formatarQuando(conv.last_message_at)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <span className={cn(
+                            "text-xs truncate",
+                            digitando ? "text-primary italic" : "text-muted-foreground"
+                          )}>
+                            {digitando ? 'digitando...' : (conv.last_message || 'Sem mensagens')}
+                          </span>
+                          {conv.nao_lidas > 0 && (
+                            <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                              {conv.nao_lidas}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
-          </CardContent>
+          </ScrollArea>
         </Card>
 
-        {/* Área do chat */}
-        <Card className="flex flex-col">
+        {/* Chat */}
+        <Card className="flex flex-col overflow-hidden">
           {conversaSelecionada ? (
             <>
-              <CardHeader className="pb-3 border-b flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setConversaSelecionada(null)}>
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <div>
-                    <CardTitle className="text-base">
-                      {conversaSelecionada.consumer_name || conversaSelecionada.subject}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {isAdmin && conversaSelecionada.consumer_email
-                        ? `${conversaSelecionada.consumer_email} • `
-                        : ''}
-                      Iniciada em {formatarData(conversaSelecionada.created_at)}
-                    </p>
+              <div className="p-3 border-b flex items-center gap-3 flex-shrink-0">
+                <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setConversaSelecionada(null)}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={conversaSelecionada.outro?.avatar_url || undefined} />
+                  <AvatarFallback className="gradient-primary text-primary-foreground">
+                    {iniciais(conversaSelecionada.outro?.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate">
+                    {conversaSelecionada.outro?.full_name || 'Utilizador'}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {outroDigitando
+                      ? <span className="text-primary italic">digitando...</span>
+                      : outroPresenca?.is_online
+                        ? <span className="text-emerald-600">online</span>
+                        : outroPresenca?.last_seen
+                          ? `visto ${formatarQuando(outroPresenca.last_seen)}`
+                          : 'offline'}
                   </div>
                 </div>
-              </CardHeader>
+              </div>
+
               <CardContent className="flex-1 overflow-hidden p-0">
                 <ScrollArea className="h-full p-4">
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {mensagens.map((msg) => {
-                      const souEu = msg.sender_id === usuario?.id && !msg.is_from_bot;
-                      const ehBot = msg.is_from_bot;
-                      
+                      const souEu = msg.sender_id === usuario?.id;
                       return (
-                        <div key={msg.id} className={cn("flex", souEu && !ehBot ? "justify-end" : "justify-start")}>
+                        <div key={msg.id} className={cn("flex", souEu ? "justify-end" : "justify-start")}>
                           <div className={cn(
-                            "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
-                            ehBot
-                              ? "bg-gradient-to-br from-slate-100 to-slate-50 text-slate-700 border"
-                              : souEu
-                                ? "bg-gradient-to-br from-primary to-primary/90 text-white"
-                                : "bg-gradient-to-br from-sky-100 to-sky-50 text-sky-900 border"
+                            "max-w-[75%] rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+                            souEu
+                              ? "bg-primary text-primary-foreground rounded-br-sm"
+                              : "bg-muted text-foreground rounded-bl-sm"
                           )}>
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              {ehBot ? (
-                                <Bot className="h-3 w-3" />
-                              ) : (
-                                <User className="h-3 w-3" />
-                              )}
-                              <span className="text-[10px] font-medium opacity-70">
-                                {ehBot ? 'Assistente' : souEu ? 'Você' : 'Atendente'}
-                              </span>
+                            <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                            <div className={cn(
+                              "flex items-center gap-1 justify-end mt-1 text-[10px]",
+                              souEu ? "text-primary-foreground/70" : "text-muted-foreground"
+                            )}>
+                              <span>{formatarHora(msg.created_at)}</span>
+                              {souEu && (msg.read_at
+                                ? <CheckCheck className="h-3 w-3 text-sky-300" />
+                                : <Check className="h-3 w-3" />)}
                             </div>
-                            <p>{msg.message}</p>
-                            <span className="text-[10px] opacity-60 mt-1 block text-right">
-                              {formatarHora(msg.created_at)}
-                            </span>
                           </div>
                         </div>
                       );
                     })}
-                    <div ref={refFimMensagens} />
+                    {outroDigitando && (
+                      <div className="flex justify-start">
+                        <div className="bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground italic">
+                          digitando...
+                        </div>
+                      </div>
+                    )}
+                    <div ref={refFim} />
                   </div>
                 </ScrollArea>
               </CardContent>
+
               <div className="p-3 border-t flex-shrink-0">
-                <form onSubmit={(e) => { e.preventDefault(); enviarMensagem(); }} className="flex gap-2">
+                <form onSubmit={(e) => { e.preventDefault(); enviar(); }} className="flex gap-2">
                   <Input
-                    placeholder="Digite sua mensagem..."
+                    placeholder="Digite uma mensagem..."
                     value={novaMensagem}
-                    onChange={(e) => setNovaMensagem(e.target.value)}
+                    onChange={(e) => aoDigitar(e.target.value)}
                     className="flex-1"
                   />
                   <Button type="submit" disabled={enviando || !novaMensagem.trim()} size="icon">
@@ -399,12 +595,65 @@ export default function Suporte() {
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
                 <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>Selecione uma conversa ou inicie uma nova</p>
+                <p>Selecione uma conversa</p>
               </div>
             </div>
           )}
         </Card>
       </div>
+
+      {/* Modal Nova Conversa */}
+      <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova conversa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                autoFocus
+                placeholder="Pesquisar por nome ou email..."
+                value={pesquisa}
+                onChange={(e) => setPesquisa(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <ScrollArea className="h-72">
+              {pesquisando ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : resultados.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhum utilizador encontrado
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {resultados.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => iniciarConversa(p)}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors text-left"
+                    >
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={p.avatar_url || undefined} />
+                        <AvatarFallback className="gradient-primary text-primary-foreground text-xs">
+                          {iniciais(p.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{p.full_name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{p.email}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -38,6 +38,41 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          message: string
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          message: string
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       component_replacements: {
         Row: {
           component_name: string
@@ -97,6 +132,56 @@ export type Database = {
           support_email?: string | null
           support_phone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message: string | null
+          last_message_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -719,6 +804,27 @@ export type Database = {
           },
         ]
       }
+      user_presence: {
+        Row: {
+          is_online: boolean
+          last_seen: string
+          typing_in_conversation: string | null
+          user_id: string
+        }
+        Insert: {
+          is_online?: boolean
+          last_seen?: string
+          typing_in_conversation?: string | null
+          user_id: string
+        }
+        Update: {
+          is_online?: boolean
+          last_seen?: string
+          typing_in_conversation?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -753,6 +859,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_sindico: { Args: { _user_id: string }; Returns: boolean }
+      is_conversation_participant: {
+        Args: { _conv: string; _user: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "morador" | "manutencao"
