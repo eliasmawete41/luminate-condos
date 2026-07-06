@@ -6,13 +6,8 @@ import {
   MessageCircle, 
   Phone, 
   Star, 
-  Lamp,
-  MapPin,
-  AlertTriangle,
-  CheckCircle2,
   Loader2,
-  HeadphonesIcon,
-  ThumbsUp
+  HeadphonesIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +19,6 @@ export default function ConsumerDashboard() {
   const [loading, setLoading] = useState(true);
   const [supportPhone, setSupportPhone] = useState('');
   const [condoName, setCondoName] = useState('');
-  const [poleStats, setPoleStats] = useState({ total: 0, funcionando: 0, com_falha: 0 });
   const [openConversations, setOpenConversations] = useState(0);
 
   useEffect(() => {
@@ -33,23 +27,14 @@ export default function ConsumerDashboard() {
 
   const fetchData = async () => {
     try {
-      const [settingsRes, polesRes, convRes] = await Promise.all([
+      const [settingsRes, convRes] = await Promise.all([
         supabase.from('condo_settings').select('*').limit(1).single(),
-        supabase.from('poles').select('status'),
         supabase.from('support_conversations').select('id', { count: 'exact' }).eq('status', 'aberto'),
       ]);
 
       if (settingsRes.data) {
         setSupportPhone(settingsRes.data.support_phone || '');
         setCondoName(settingsRes.data.condo_name || 'Condomínio');
-      }
-
-      if (polesRes.data) {
-        setPoleStats({
-          total: polesRes.data.length,
-          funcionando: polesRes.data.filter((p: any) => p.status === 'funcionando').length,
-          com_falha: polesRes.data.filter((p: any) => p.status === 'com_falha').length,
-        });
       }
 
       setOpenConversations(convRes.count || 0);
@@ -136,42 +121,6 @@ export default function ConsumerDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Status dos Postes - Apenas informativo */}
-      <Card className="bg-gradient-to-br from-slate-900/5 to-slate-800/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lamp className="h-5 w-5 text-primary" />
-            Status da Iluminação
-          </CardTitle>
-          <CardDescription>Visão geral do sistema de iluminação do condomínio</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-violet-500/5 border border-violet-200/30">
-              <div className="flex items-center gap-2 mb-2">
-                <Lamp className="h-5 w-5 text-violet-600" />
-                <span className="font-medium text-violet-700">Total de Postes</span>
-              </div>
-              <p className="text-3xl font-bold text-violet-700">{poleStats.total}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-200/30">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                <span className="font-medium text-emerald-700">Funcionando</span>
-              </div>
-              <p className="text-3xl font-bold text-emerald-700">{poleStats.funcionando}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-200/30">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-                <span className="font-medium text-amber-700">Com Problemas</span>
-              </div>
-              <p className="text-3xl font-bold text-amber-700">{poleStats.com_falha}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Info do Condomínio */}
       <Card>
