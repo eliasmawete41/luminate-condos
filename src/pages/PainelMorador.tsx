@@ -6,12 +6,8 @@ import {
   MessageCircle, 
   Phone, 
   Star, 
-  MapPin,
-  AlertTriangle,
-  CheckCircle2,
   Loader2,
-  HeadphonesIcon,
-  ThumbsUp
+  HeadphonesIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
