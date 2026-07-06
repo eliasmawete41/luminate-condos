@@ -126,42 +126,6 @@ export default function ConsumerDashboard() {
         </Card>
       </div>
 
-      {/* Status dos Postes - Apenas informativo */}
-      <Card className="bg-gradient-to-br from-slate-900/5 to-slate-800/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lamp className="h-5 w-5 text-primary" />
-            Status da Iluminação
-          </CardTitle>
-          <CardDescription>Visão geral do sistema de iluminação do condomínio</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-violet-500/5 border border-violet-200/30">
-              <div className="flex items-center gap-2 mb-2">
-                <Lamp className="h-5 w-5 text-violet-600" />
-                <span className="font-medium text-violet-700">Total de Postes</span>
-              </div>
-              <p className="text-3xl font-bold text-violet-700">{poleStats.total}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-200/30">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                <span className="font-medium text-emerald-700">Funcionando</span>
-              </div>
-              <p className="text-3xl font-bold text-emerald-700">{poleStats.funcionando}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-200/30">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-                <span className="font-medium text-amber-700">Com Problemas</span>
-              </div>
-              <p className="text-3xl font-bold text-amber-700">{poleStats.com_falha}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Info do Condomínio */}
       <Card>
         <CardContent className="pt-6">
