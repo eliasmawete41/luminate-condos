@@ -1,34 +1,45 @@
-## Plano para resolver o problema do ESP32
+## Plano de Melhorias Gerais
 
-1. **Corrigir o endpoint `/dispositivos`**
-   - Reescrever a função para aceitar também o caso comum em ESP32 em que o corpo chega como texto cru, com cabeçalhos incompletos ou sem `Content-Type: application/json`.
-   - Extrair somente os campos reais enviados pelo chip:
-     - `ldr`
-     - `poste_bom_status`
-     - `corrente_poste_bom`
-     - `potencia_poste_bom`
-     - `poste_estragado_status`
-     - `corrente_poste_estragado`
-     - `potencia_poste_estragado`
-   - Remover qualquer fallback que possa mascarar dados ausentes como `0`/`DESLIGADO` sem avisar.
-   - Retornar erro claro quando o JSON vier inválido ou sem os campos obrigatórios.
+Este é um conjunto amplo de mudanças. Proponho dividir em fases para entregar com qualidade, sem quebrar o que já funciona. Cada fase pode ser aprovada e implementada separadamente.
 
-2. **Garantir que a função publicada é a versão certa**
-   - Depois de alterar o código, publicar novamente a Edge Function `dispositivos`.
-   - Testar o endpoint com um POST realista e confirmar que a linha aparece na tabela `esp32_leituras`.
+---
 
-3. **Fortalecer o painel `/monitor-esp32`**
-   - Manter Realtime para novos registos.
-   - Manter polling de 5 segundos como reserva.
-   - Mostrar erro visível no painel quando a busca falhar, em vez de parecer que “não chegou nada”.
-   - Evitar que o estado “Tempo real ligado” esconda uma tabela vazia quando o problema estiver no webhook.
+### Fase 1 — Perfil e Autenticação
+- **Página de Perfil unificada** (`/perfil`) acessível por todos os papéis (admin, técnico, morador) com: dados pessoais, foto, alteração de senha, preferências de notificação.
+- **Cadastro de Morador com verificação**:
+  - Formulário de registo já existente na tela de login continua, mas passa a criar o utilizador com status `pendente_verificacao`.
+  - Morador escolhe **Bloco + Unidade (nº da casa)** no cadastro.
+  - Admin recebe notificação e aprova/rejeita numa nova secção "Aprovações Pendentes" em `/usuarios`.
+  - Só após aprovação o morador consegue aceder ao painel.
+- **Recuperação de conta com emails fictícios**:
+  - Fluxo alternativo: morador informa email + nome completo + nº da unidade → sistema gera token temporário → admin visualiza pedidos pendentes e libera reset → morador define nova senha via link/token interno (sem depender de envio real de email).
 
-4. **Limpar leituras de teste se necessário**
-   - Depois de validar o endpoint com uma leitura controlada, remover apenas os registos de teste criados durante a validação, mantendo o histórico limpo para o ESP32 real.
+### Fase 2 — Restrição por Rua/Bloco (Morador)
+- Adicionar campo `rua` (ou usar `block_id`) na tabela `residents`/`units`.
+- Morador só vê postes cuja `rua`/`bloco` corresponde à sua unidade.
+- Aplicar via RLS + filtros no frontend (`/inicio`, mapa se acessível).
 
-## Detalhes técnicos
+### Fase 3 — Relatórios (substitui Histórico)
+- Renomear rota `/historico` → `/relatorios`.
+- Tipos de relatório: **Ocorrências (avarias)**, **Manutenções**, **Geral**, **Moradores**.
+- Filtros: tipo, status, **intervalo de datas** (date range), bloco/unidade.
+- **Pré-visualização em tabela/cards antes de exportar**.
+- Exportação em **PDF** (usando `jsPDF` + `jspdf-autotable`) com cabeçalho do condomínio.
 
-- A base de dados está saudável e a tabela `esp32_leituras` existe.
-- A tabela está vazia neste momento, por isso o painel não tem nada para mostrar.
-- Não há logs recentes da função `dispositivos`, o que indica que o ESP32 provavelmente não está a atingir a função publicada correta, ou a chamada está a falhar antes de inserir.
-- A correção principal será tornar o endpoint mais compatível com requests de ESP32 e validar/deployar a função publicada.
+### Fase 4 — Notificações Funcionais por Papel
+- **Admin**: novas avarias reportadas, novos cadastros pendentes, avaliações recebidas.
+- **Técnico**: novas ordens de manutenção atribuídas, atualizações de status.
+- **Morador**: respostas do chat de suporte, status da sua avaria, avisos gerais.
+- Sino no header abre dropdown com lista, marcação de lidas, contador de não lidas (Realtime).
+
+### Fase 5 — Responsividade e Design
+- Auditoria mobile em: Painel Admin, Painel Técnico, Painel Morador, Postes, Manutenções, Unidades, Usuários, Configurações, Mapa, Dispositivos.
+- Correções: grids que quebram, tabelas com scroll horizontal, sidebar em mobile, cards empilhados, tipografia fluida.
+- **Melhorias visuais**: imagens de qualidade (Unsplash/geradas) nos headers dos painéis, ícones ilustrativos, gradientes já existentes reforçados, espaçamento e hierarquia revistos.
+
+---
+
+### Como quero prosseguir
+Este escopo é grande demais para uma única entrega. **Sugiro começar pela Fase 1 (Perfil + Verificação de morador + Recuperação alternativa)** por ser bloqueante para o resto, e depois seguir na ordem acima.
+
+**Confirma que posso começar pela Fase 1?** Ou prefere outra ordem / quer que eu junte fases?
