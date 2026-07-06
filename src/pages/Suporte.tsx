@@ -319,13 +319,11 @@ export default function Suporte() {
       }
 
       if (!convId) {
-        const { data: nova, error } = await db
+        convId = crypto.randomUUID();
+        const { error } = await db
           .from('conversations')
-          .insert({})
-          .select()
-          .single();
+          .insert({ id: convId });
         if (error) throw error;
-        convId = nova.id;
         const { error: e2 } = await db
           .from('conversation_participants')
           .insert([
