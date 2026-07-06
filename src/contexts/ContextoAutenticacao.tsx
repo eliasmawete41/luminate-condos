@@ -10,6 +10,9 @@ interface Profile {
   email: string;
   phone: string | null;
   avatar_url: string | null;
+  status?: string | null;
+  requested_unit_id?: string | null;
+  rejection_reason?: string | null;
 }
 
 interface AuthContextType {
