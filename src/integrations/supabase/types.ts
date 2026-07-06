@@ -479,6 +479,51 @@ export type Database = {
           },
         ]
       }
+      password_reset_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          status: string
+          token: string | null
+          token_expires_at: string | null
+          unit_number: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          status?: string
+          token?: string | null
+          token_expires_at?: string | null
+          unit_number?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          status?: string
+          token?: string | null
+          token_expires_at?: string | null
+          unit_number?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       poles: {
         Row: {
           code: string
@@ -588,6 +633,9 @@ export type Database = {
           full_name: string
           id: string
           phone: string | null
+          rejection_reason: string | null
+          requested_unit_id: string | null
+          status: string
           updated_at: string | null
         }
         Insert: {
@@ -597,6 +645,9 @@ export type Database = {
           full_name: string
           id: string
           phone?: string | null
+          rejection_reason?: string | null
+          requested_unit_id?: string | null
+          status?: string
           updated_at?: string | null
         }
         Update: {
@@ -606,9 +657,20 @@ export type Database = {
           full_name?: string
           id?: string
           phone?: string | null
+          rejection_reason?: string | null
+          requested_unit_id?: string | null
+          status?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_requested_unit_id_fkey"
+            columns: ["requested_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resident_history: {
         Row: {
@@ -851,6 +913,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_resident: { Args: { _user_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -862,6 +925,10 @@ export type Database = {
       is_conversation_participant: {
         Args: { _conv: string; _user: string }
         Returns: boolean
+      }
+      reject_resident: {
+        Args: { _reason: string; _user_id: string }
+        Returns: undefined
       }
     }
     Enums: {
