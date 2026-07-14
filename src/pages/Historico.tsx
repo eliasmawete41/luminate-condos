@@ -15,7 +15,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/abas';
 import {
   History, Search, Download, Loader2, CheckCircle2, XCircle, Calendar,
-  Eye, AlertTriangle, Wrench, LayoutList,
+  Eye, AlertTriangle, Wrench, LayoutList, FileText,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -69,9 +69,9 @@ const diasEntre = (inicio: string | null, fim: string | null) => {
 type CategoriaHistorico = 'geral' | 'avaria' | 'manutencao';
 
 const rotuloCategoria: Record<CategoriaHistorico, string> = {
-  geral: 'Histórico Geral',
-  avaria: 'Avarias Resolvidas',
-  manutencao: 'Manutenções Concluídas',
+  geral: 'Relatório Geral',
+  avaria: 'Relatório de Avarias',
+  manutencao: 'Relatório de Manutenções',
 };
 
 // Tipos de falha considerados "avaria" (relatadas como problema/quebra)
@@ -88,6 +88,9 @@ export default function Historico() {
   const [filtroResultado, setFiltroResultado] = useState<string>('all');
   const [categoria, setCategoria] = useState<CategoriaHistorico>('geral');
   const [registroVisualizando, setRegistroVisualizando] = useState<Ocorrencia | null>(null);
+  const [dataInicio, setDataInicio] = useState<string>('');
+  const [dataFim, setDataFim] = useState<string>('');
+  const [previewAberto, setPreviewAberto] = useState(false);
 
   useEffect(() => {
     buscarHistorico();
@@ -123,9 +126,13 @@ export default function Historico() {
         categoria === 'geral' ||
         (categoria === 'avaria' && TIPOS_AVARIA.has(r.failure_type)) ||
         (categoria === 'manutencao' && !TIPOS_AVARIA.has(r.failure_type));
-      return correspondeBusca && correspondeResultado && correspondeCategoria;
+      const dataRef = r.completed_date || r.created_at;
+      const correspondeData =
+        (!dataInicio || (dataRef && new Date(dataRef) >= new Date(dataInicio))) &&
+        (!dataFim || (dataRef && new Date(dataRef) <= new Date(dataFim + 'T23:59:59')));
+      return correspondeBusca && correspondeResultado && correspondeCategoria && correspondeData;
     });
-  }, [registros, termoBusca, filtroResultado, categoria]);
+  }, [registros, termoBusca, filtroResultado, categoria, dataInicio, dataFim]);
 
   const totalConcluidas = registrosFiltrados.filter((r) => r.status === 'concluido').length;
   const totalCanceladas = registrosFiltrados.filter((r) => r.status === 'cancelado').length;
@@ -226,18 +233,28 @@ export default function Historico() {
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-white/20"><History className="h-6 w-6" /></div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl drop-shadow-sm">Histórico de Ocorrências</h1>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl drop-shadow-sm">Relatórios</h1>
               <p className="text-white/80">Avarias, manutenções e registros gerais do condomínio</p>
             </div>
           </div>
-          <Button
-            variant="secondary"
-            className="gap-2 shadow-md"
-            onClick={baixarPdf}
-            disabled={registrosFiltrados.length === 0}
-          >
-            <Download className="h-4 w-4" />Baixar PDF
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              className="gap-2 shadow-md"
+              onClick={() => setPreviewAberto(true)}
+              disabled={registrosFiltrados.length === 0}
+            >
+              <FileText className="h-4 w-4" />Pré-visualizar
+            </Button>
+            <Button
+              variant="secondary"
+              className="gap-2 shadow-md"
+              onClick={baixarPdf}
+              disabled={registrosFiltrados.length === 0}
+            >
+              <Download className="h-4 w-4" />Baixar PDF
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -298,7 +315,7 @@ export default function Historico() {
       {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:flex-wrap">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -307,6 +324,28 @@ export default function Historico() {
                 value={termoBusca}
                 onChange={(e) => setTermoBusca(e.target.value)}
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+                className="w-[160px]"
+                aria-label="Data inicial"
+              />
+              <span className="text-muted-foreground text-sm">até</span>
+              <Input
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+                className="w-[160px]"
+                aria-label="Data final"
+              />
+              {(dataInicio || dataFim) && (
+                <Button variant="ghost" size="sm" onClick={() => { setDataInicio(''); setDataFim(''); }}>
+                  Limpar
+                </Button>
+              )}
             </div>
             <Select value={filtroResultado} onValueChange={setFiltroResultado}>
               <SelectTrigger className="w-[180px]"><SelectValue placeholder="Resultado" /></SelectTrigger>
@@ -496,6 +535,53 @@ export default function Historico() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Pré-visualização do relatório completo */}
+      <Dialog open={previewAberto} onOpenChange={setPreviewAberto}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Pré-visualização — {rotuloCategoria[categoria]}
+            </DialogTitle>
+            <DialogDescription>
+              Confira os {registrosFiltrados.length} registro(s) antes de exportar em PDF.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Poste</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Resultado</TableHead>
+                  <TableHead>Ocorrência</TableHead>
+                  <TableHead>Resolução</TableHead>
+                  <TableHead>Duração</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {registrosFiltrados.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.poles?.code || 'N/A'}</TableCell>
+                    <TableCell className="text-sm">{tiposFalha[r.failure_type] || r.failure_type}</TableCell>
+                    <TableCell className="text-sm">{r.status === 'concluido' ? 'Concluído' : 'Cancelado'}</TableCell>
+                    <TableCell className="text-sm">{formatarData(r.created_at)}</TableCell>
+                    <TableCell className="text-sm">{formatarData(r.completed_date)}</TableCell>
+                    <TableCell className="text-sm">{diasEntre(r.created_at, r.completed_date)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setPreviewAberto(false)}>Fechar</Button>
+            <Button onClick={() => { baixarPdf(); setPreviewAberto(false); }} className="gap-2">
+              <Download className="h-4 w-4" /> Baixar PDF
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
