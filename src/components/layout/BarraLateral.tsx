@@ -18,7 +18,7 @@ const adminMenuItems = [
   { title: 'Painel Principal', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Postes', url: '/postes', icon: Lamp },
   { title: 'Manutenções', url: '/manutencoes', icon: Wrench },
-  { title: 'Histórico', url: '/historico', icon: History },
+  { title: 'Relatórios', url: '/historico', icon: History },
   { title: 'Mapa', url: '/mapa', icon: MapPin },
 ];
 
