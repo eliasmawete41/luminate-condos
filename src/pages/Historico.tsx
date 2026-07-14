@@ -537,6 +537,53 @@ export default function Historico() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Pré-visualização do relatório completo */}
+      <Dialog open={previewAberto} onOpenChange={setPreviewAberto}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Pré-visualização — {rotuloCategoria[categoria]}
+            </DialogTitle>
+            <DialogDescription>
+              Confira os {registrosFiltrados.length} registro(s) antes de exportar em PDF.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Poste</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Resultado</TableHead>
+                  <TableHead>Ocorrência</TableHead>
+                  <TableHead>Resolução</TableHead>
+                  <TableHead>Duração</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {registrosFiltrados.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.poles?.code || 'N/A'}</TableCell>
+                    <TableCell className="text-sm">{tiposFalha[r.failure_type] || r.failure_type}</TableCell>
+                    <TableCell className="text-sm">{r.status === 'concluido' ? 'Concluído' : 'Cancelado'}</TableCell>
+                    <TableCell className="text-sm">{formatarData(r.created_at)}</TableCell>
+                    <TableCell className="text-sm">{formatarData(r.completed_date)}</TableCell>
+                    <TableCell className="text-sm">{diasEntre(r.created_at, r.completed_date)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setPreviewAberto(false)}>Fechar</Button>
+            <Button onClick={() => { baixarPdf(); setPreviewAberto(false); }} className="gap-2">
+              <Download className="h-4 w-4" /> Baixar PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
